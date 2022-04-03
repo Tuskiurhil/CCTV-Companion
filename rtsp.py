@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import PySimpleGUI as sg
 import cv2
+import webbrowser
 # Simple example of TabGroup element and the options available to it
 
 sg.theme('Dark Amber')     # Please always add color to your window
@@ -14,8 +15,8 @@ sg.theme('Dark Amber')     # Please always add color to your window
 
 
 def opencamerastream():
-    global ADDRESS, USERNAME, PASSWORD
-    capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+"/cam/realmonitor?channel=1&subtype=1")
+    global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT
+    capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
     #capture = cv2.VideoCapture("rtsp://admin:123456789a@192.168.178.222/cam/realmonitor?channel=1&subtype=1")
 
     while(capture.isOpened()):
@@ -34,10 +35,11 @@ def opencamerastream():
 
 # The tab 1, 2, 3 layouts - what goes inside the tab
 tab1_layout = [[sg.Text('RTSP Stream')],      
-          [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
-          [sg.Text('Username'), sg.Input(key='-USERNAME-')],
-          [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],      
-          [sg.Button('Open'), sg.Exit()]]    
+        [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
+        [sg.Text('Username'), sg.Input(key='-USERNAME-')],
+        [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],
+        [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
+        [sg.Button('Open'), sg.Button('Web Interface'), sg.Exit()]]
 
 tab2_layout = [[sg.Text('Capacity Calculation')]]
 tab3_layout = [[sg.Text('IP Calculation')]]
@@ -67,8 +69,15 @@ while True:
         ADDRESS = values['-ADDRESS-']
         USERNAME = values['-USERNAME-']
         PASSWORD = values['-PASSWORD-']
+        if values["-CHANNEL0-"] == True:
+            CHANNELSELECT = '0'
+        elif values["-CHANNEL1-"] == True:
+            CHANNELSELECT = '1'
         ###ADDRESS = values['-ADDRESS-']
         opencamerastream()
+    if event == 'Web Interface':
+        ADDRESS = values['-ADDRESS-']
+        webbrowser.open(ADDRESS)
     if event == sg.WIN_CLOSED or event == 'Exit':
         break
     # handle button clicks
