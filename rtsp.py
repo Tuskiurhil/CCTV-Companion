@@ -5,12 +5,12 @@ import cv2
 import webbrowser
 import pyperclip
 import os 
-import requests
+import threading
 
 # Simple example of TabGroup element and the options available to it
 
 sg.theme('Dark Amber')     # Please always add color to your window
-
+rtspcounter = 0
 
 try:
     splashscreen = "splashscreen.png"
@@ -24,22 +24,25 @@ except:
     pass
 
 def opencamerastream():
-    global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT
+    global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, rtspcounter
     capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
-    #capture = cv2.VideoCapture("rtsp://admin:123456789a@192.168.178.222/cam/realmonitor?channel=1&subtype=1")
-
+    
     while(capture.isOpened()):
         ret, frame = capture.read()
         #   Allowing to resize the window
-        cv2.namedWindow('frame', cv2.WINDOW_NORMAL)
-        cv2.imshow('frame', frame)
+        cv2.namedWindow(str(ADDRESS), cv2.WINDOW_NORMAL)
+        cv2.imshow(str(ADDRESS), frame)
         if cv2.waitKey(20) & 0xFF == ord('Q'):
             break
         #   Checks if the Window is being closed by pressing the "X" button, if the window becomes invisible it'll break
-        if cv2.getWindowProperty('frame', cv2.WND_PROP_VISIBLE) <1:
+        if cv2.getWindowProperty(str(ADDRESS), cv2.WND_PROP_VISIBLE) <1:
             break
     capture.release()
     cv2.destroyAllWindows()
+    print(rtspcounter)
+    rtspcounter -= 1
+    print(rtspcounter)
+
 
 
 # The tab 1, 2, 3 layouts - what goes inside the tab
@@ -127,11 +130,13 @@ while True:
         ADDRESS = values['-ADDRESSMAINT-']
         USERNAME = values['-USERNAMEMAINT-']
         PASSWORD = values['-PASSWORDMAINT-']
-        serialno = requests.get('http://admin:123456789a@192.168.178.222/cgi-bin/magicBox.cgi?action=getSerialNo')
+        webbrowser.open("http://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+"/cgi-bin/magicBox.cgi?action=getSerialNo")
+        #serialno = requests.get('http://admin:123456789a@192.168.178.222/cgi-bin/magicBox.cgi?action=getSerialNo')
         #serialno = requests.get("http://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+"/cgi-bin/magicBox.cgi?action=getSerialNo")
-        sg.PopupOK(serialno)
+        #sg.PopupOK(serialno)
 
     if event == 'Open':
+        print(rtspcounter)
         ADDRESS = values['-ADDRESS-']
         USERNAME = values['-USERNAME-']
         PASSWORD = values['-PASSWORD-']
@@ -140,7 +145,14 @@ while True:
         elif values["-CHANNEL1-"] == True:
             CHANNELSELECT = '1'
         ###ADDRESS = values['-ADDRESS-']
-        opencamerastream()
+        if rtspcounter > 0:
+            sg.PopupError("Only one RTSP Stream can be open at any time!")
+        if rtspcounter == 0:
+            rtspcounter = +1
+            print(rtspcounter)
+            camstream = threading.Thread(target=opencamerastream)
+            camstream.start()
+        #opencamerastream()
     if event == 'Copy RTSP Link':
         ADDRESS = values['-ADDRESS-']
         USERNAME = values['-USERNAME-']
