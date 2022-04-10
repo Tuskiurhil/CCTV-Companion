@@ -6,11 +6,14 @@ import webbrowser
 import pyperclip
 import os 
 import threading
+import multiprocessing
+import sys
+import time
 
 # Simple example of TabGroup element and the options available to it
 
-sg.theme('Dark Amber')     # Please always add color to your window
-rtspcounter = 0
+sg.theme('DarkGrey5')     # Please always add color to your window
+#rtspcounter = 0
 MP1 = int()
 MP2 = int()
 MP4 = int()
@@ -34,11 +37,10 @@ def webbrowserapiwindow():
     global ADDRESS, USERNAME, PASSWORD, TARGETAPI
     webbrowser.open("http://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+TARGETAPI)
 
-
 def opencamerastream():
     global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, rtspcounter
     capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
-    
+
     while(capture.isOpened()):
         ret, frame = capture.read()
         #   Allowing to resize the window
@@ -46,14 +48,18 @@ def opencamerastream():
         cv2.imshow(str(ADDRESS), frame)
         if cv2.waitKey(20) & 0xFF == ord('Q'):
             break
+            #rtspcounter -= 1
         #   Checks if the Window is being closed by pressing the "X" button, if the window becomes invisible it'll break
         if cv2.getWindowProperty(str(ADDRESS), cv2.WND_PROP_VISIBLE) <1:
             break
+            #rtspcounter -= 1
+        #if cv2.getWindowProperty(str(ADDRESS), 0) >= 0:
+            #keyCode = cv2.waitKey(50)
+            #break
+    #rtspcounter -= 1
     capture.release()
     cv2.destroyAllWindows()
-    print(rtspcounter)
-    rtspcounter -= 1
-    print(rtspcounter)
+    #print(rtspcounter)
 
 
 
@@ -83,7 +89,7 @@ tab1_layout = [[sg.Text('RTSP Stream'), sg.Image('dahua_logo.png', subsample=(14
 #tab2grouplayout = [sg.Tab('Video Size', tab2_videosize, key='-VIDEOSIZE-'), 
                 #sg.Tab('Record Time', tab2_recordtime, key='-RECORDTIME-'),
                 #sg.Tab('Disk Array', tab2_diskarray, key='-DISKARRAY-')]
-tab2_layout =    [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
+tab2_layout =   [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
                 [sg.Text('Resolution'), sg.Text('# of Cameras'), sg.Text('Codec')],
                 [sg.Text('1 Megapixel'), sg.Input('', key='-#1MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL1', default=True, key='#1MPh265'), sg.Radio('H.264', 'CODECSEL1', key='#1MPh264'), sg.Radio('MJPEG', 'CODECSEL1', key='#1MPMJPEG')],
                 [sg.Text('2 Megapixel'), sg.Input('', key='-#2MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL2', default=True, key='#2MPh265'), sg.Radio('H.264', 'CODECSEL2', key='#2MPh264'), sg.Radio('MJPEG', 'CODECSEL2', key='#2MPMJPEG')],
@@ -190,7 +196,7 @@ while True:
         serialnoapi.start()
 
     if event == 'Open':
-        print(rtspcounter)
+        #print(rtspcounter)
         ADDRESS = values['-ADDRESS-']
         USERNAME = values['-USERNAME-']
         PASSWORD = values['-PASSWORD-']
@@ -199,14 +205,17 @@ while True:
         elif values["-CHANNEL1-"] == True:
             CHANNELSELECT = '1'
         ###ADDRESS = values['-ADDRESS-']
-        if rtspcounter > 0:
-            sg.PopupError("Only one RTSP Stream can be open at any time!")
-        if rtspcounter == 0:
-            rtspcounter = +1
-            print(rtspcounter)
-            camstream = threading.Thread(target=opencamerastream)
-            camstream.start()
-            #opencamerastream()
+        #if rtspcounter != 0:
+            #sg.PopupError("Only one RTSP Stream can be open at any time!")
+        #if rtspcounter != 1:
+            #rtspcounter += 1
+            #print(rtspcounter)
+        camstream = multiprocessing.Process(target=opencamerastream)
+        print("Opening RTSP Stream, please wait a moment...")
+            #camstream = threading.Thread(target=opencamerastream)
+        camstream.daemon = True
+        camstream.start()
+        #opencamerastream()
     if event == 'Copy RTSP Link':
         ADDRESS = values['-ADDRESS-']
         USERNAME = values['-USERNAME-']
@@ -238,7 +247,8 @@ while True:
                 elif values['#1MPh264'] == True:
                     MP1 = int(values['-#1MP-']) * 2048
             if len(values['-#1MP-']) == 0:
-                pass
+                MP1 = 0
+                #pass
 
             if len(values['-#2MP-']) > 0:
                 if values['#2MPh265'] == True:
@@ -246,7 +256,8 @@ while True:
                 elif values['#2MPh264'] == True:
                     MP2 = int(values['-#2MP-']) * 4096
             if len(values['-#2MP-']) == 0:
-                pass
+                MP2 = 0
+                #pass
 
             if len(values['-#4MP-']) > 0:
                 if values['#4MPh265'] == True:
@@ -254,7 +265,8 @@ while True:
                 elif values['#4MPh264'] == True:
                     MP4 = int(values['-#4MP-']) * 4096
             if len(values['-#4MP-']) == 0:
-                pass
+                MP4 = 0
+                #pass
 
             if len(values['-#5MP-']) > 0:
                 if values['#5MPh265'] == True:
@@ -262,7 +274,8 @@ while True:
                 elif values['#5MPh264'] == True:
                     MP5 = int(values['-#5MP-']) * 6144
             if len(values['-#5MP-']) == 0:
-                pass
+                MP5 = 0
+                #pass
 
             if len(values['-#6MP-']) > 0:
                 if values['#6MPh265'] == True:
@@ -270,7 +283,8 @@ while True:
                 elif values['#6MPh264'] == True:
                     MP6 = int(values['-#6MP-']) * 6144
             if len(values['-#6MP-']) == 0:
-                pass
+                MP6 = 0
+                #pass
 
             if len(values['-#8MP-']) > 0:
                 if values['#8MPh265'] == True:
@@ -278,7 +292,8 @@ while True:
                 elif values['#8MPh264'] == True:
                     MP8 = int(values['-#8MP-']) * 8192
             if len(values['-#8MP-']) == 0:
-                pass
+                MP8 = int(0)
+                #pass
 
             if len(values['-#12MP-']) > 0:
                 if values['#12MPh265'] == True:
@@ -286,7 +301,8 @@ while True:
                 elif values['#12MPh264'] == True:
                     MP12 = int(values['-#12MP-']) * 12288
             if len(values['-#12MP-']) == 0:
-                pass
+                MP12 = int(0)
+                #pass
 
         
             #if int(values['-#1MP-']) > 0:
