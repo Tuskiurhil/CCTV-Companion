@@ -15,7 +15,7 @@ PASSWORD = ""
 TARGETAPI = ""
 
 #   defining which animated GIF to use for loading screens.
-loading_gif = r'loadingcircle.gif'
+#loading_gif = r'loadingcircle.gif'
 
 #   this function is called when the user wants to grab certain information from the API.
 #   it only works through the webbrowser at the moment. A GUI solution is being worked on.
@@ -54,7 +54,7 @@ def main():
     MP8 = int()
     MP12 = int()
 
-    global ADDRESS, USERNAME, PASSWORD, TARGETAPI, loading_gif
+    global ADDRESS, USERNAME, PASSWORD, TARGETAPI#, loading_gif
 #   Loading and Displaying a Splashscreen upon start of the Software. If none is found, pass.
     try:
         splashscreen = "splashscreen.png"
@@ -77,7 +77,7 @@ def main():
             [sg.Button('Reboot'), sg.Button('Snapshot')],
             [sg.Button('Exit', key='-EXIT0-')]]
         
-    tab1_layout = [[sg.Text('RTSP Stream'), sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
+    tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
             [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
             [sg.Text('Username'), sg.Input(key='-USERNAME-')],
             [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],
@@ -86,13 +86,13 @@ def main():
             
     tab2_layout =   [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
                     [sg.Text('Resolution'), sg.Text('# of Cameras'), sg.Text('Codec')],
-                    [sg.Text('1 Megapixel  '), sg.Input('', key='-#1MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL1', default=True, key='#1MPh265'), sg.Radio('H.264', 'CODECSEL1', key='#1MPh264'), sg.Radio('MJPEG', 'CODECSEL1', key='#1MPMJPEG')],
-                    [sg.Text('2 Megapixel  '), sg.Input('', key='-#2MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL2', default=True, key='#2MPh265'), sg.Radio('H.264', 'CODECSEL2', key='#2MPh264'), sg.Radio('MJPEG', 'CODECSEL2', key='#2MPMJPEG')],
-                    [sg.Text('4 Megapixel  '), sg.Input('', key='-#4MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL4', default=True, key='#4MPh265'), sg.Radio('H.264', 'CODECSEL4', key='#4MPh264'), sg.Radio('MJPEG', 'CODECSEL4', key='#4MPMJPEG')],
-                    [sg.Text('5 Megapixel  '), sg.Input('', key='-#5MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL5', default=True, key='#5MPh265'), sg.Radio('H.264', 'CODECSEL5', key='#5MPh264'), sg.Radio('MJPEG', 'CODECSEL5', key='#5MPMJPEG')],
-                    [sg.Text('6 Megapixel  '), sg.Input('', key='-#6MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL6', default=True, key='#6MPh265'), sg.Radio('H.264', 'CODECSEL6', key='#6MPh264'), sg.Radio('MJPEG', 'CODECSEL6', key='#6MPMJPEG')],
-                    [sg.Text('8 Megapixel  '), sg.Input('', key='-#8MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL8', default=True, key='#8MPh265'), sg.Radio('H.264', 'CODECSEL8', key='#8MPh264'), sg.Radio('MJPEG', 'CODECSEL8', key='#8MPMJPEG')],
-                    [sg.Text('12 Megapixel'), sg.Input('', key='-#12MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL12', default=True, key='#12MPh265'), sg.Radio('H.264', 'CODECSEL12', key='#12MPh264'), sg.Radio('MJPEG', 'CODECSEL12', key='#12MPMJPEG')],
+                    [sg.Text('1 Megapixel  '), sg.Input('', key='-#1MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL1', default=True, key='#1MPh265'), sg.Radio('H.264', 'CODECSEL1', key='#1MPh264')], #sg.Radio('MJPEG', 'CODECSEL1', key='#1MPMJPEG')],
+                    [sg.Text('2 Megapixel  '), sg.Input('', key='-#2MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL2', default=True, key='#2MPh265'), sg.Radio('H.264', 'CODECSEL2', key='#2MPh264')], #sg.Radio('MJPEG', 'CODECSEL2', key='#2MPMJPEG')],
+                    [sg.Text('4 Megapixel  '), sg.Input('', key='-#4MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL4', default=True, key='#4MPh265'), sg.Radio('H.264', 'CODECSEL4', key='#4MPh264')], #sg.Radio('MJPEG', 'CODECSEL4', key='#4MPMJPEG')],
+                    [sg.Text('5 Megapixel  '), sg.Input('', key='-#5MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL5', default=True, key='#5MPh265'), sg.Radio('H.264', 'CODECSEL5', key='#5MPh264')], #sg.Radio('MJPEG', 'CODECSEL5', key='#5MPMJPEG')],
+                    [sg.Text('6 Megapixel  '), sg.Input('', key='-#6MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL6', default=True, key='#6MPh265'), sg.Radio('H.264', 'CODECSEL6', key='#6MPh264')], #sg.Radio('MJPEG', 'CODECSEL6', key='#6MPMJPEG')],
+                    [sg.Text('8 Megapixel  '), sg.Input('', key='-#8MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL8', default=True, key='#8MPh265'), sg.Radio('H.264', 'CODECSEL8', key='#8MPh264')], #sg.Radio('MJPEG', 'CODECSEL8', key='#8MPMJPEG')],
+                    [sg.Text('12 Megapixel'), sg.Input('', key='-#12MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL12', default=True, key='#12MPh265'), sg.Radio('H.264', 'CODECSEL12', key='#12MPh264')], #sg.Radio('MJPEG', 'CODECSEL12', key='#12MPMJPEG')],
                     [sg.Button('Calculate', key='-BANDWIDTHCALCULATE-'), sg.Button('Exit', key='-EXIT2-')],
 
                     [sg.Text('Approximate Bandwidth Usage: '), sg.InputText("", key="-BandwidthResultTextKB-", readonly=True, size=(8,1), text_color="black"), sg.Text("Kilobit per second")],
@@ -102,13 +102,10 @@ def main():
 
     tab4_layout = [[sg.Text('Lens Calculation')]]
 
-    tab5_layout = [[sg.Text('Controlex')],
-                    [sg.Button('Website', key='-CONTROLEXWEBSITE-'), sg.Button('Online Shop', key='-CONTROLEXWEBSHOP-'), sg.Button('Support Portal', key='-CONTROLEXSUPPORTPORTAL-'), sg.Button('Exit', key='-EXIT5-'), sg.Button('Help', key='-CONTROLEXHELP-')]]
-
-    tab6_layout = [[sg.Text('Controlex CCTV Companion\n\n'
+    tab6_layout = [[sg.Text('CCTV Companion\n\n'
                             'Version 0.1\n\n\n\n\n')],
-                    [sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
-                    [sg.Text('The Controlex Logo is ©Copyrighted by Controlex GmbH')]]
+                    #[sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
+                    [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n")]]
 
 #   Tab Group Layout (must contain ONLY tabs)
     tab_group_layout = [[sg.Tab('Camera Maintenance', tab0_layout, key='-TAB0-'),
@@ -116,7 +113,6 @@ def main():
                         sg.Tab('Capacity Calculation', tab2_layout, key='-TAB2-'),
                         sg.Tab('IP Calculation', tab3_layout, key='-TAB3-'),
                         sg.Tab('Lens Calculation', tab4_layout, key='-TAB4-'),
-                        sg.Tab('Controlex', tab5_layout, key='-TAB5-'),
                         sg.Tab('About', tab6_layout, key='-TAB6-'),
                         ]]
 
@@ -188,9 +184,9 @@ def main():
             print("Opening RTSP Stream, please wait a moment...")
             camstream.daemon = True
             camstream.start()
-            for i in range(300):
-                sg.popup_animated(loading_gif, time_between_frames=90)
-            sg.popup_animated(None)
+            #for i in range(300):
+            #    sg.popup_animated(loading_gif, time_between_frames=90)
+            #sg.popup_animated(None)
 
         if event == 'Copy RTSP Link':
             ADDRESS = values['-ADDRESS-']
