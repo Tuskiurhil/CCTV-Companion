@@ -8,6 +8,8 @@ import threading
 import multiprocessing
 import sys
 import time
+import requests
+from requests.auth import HTTPDigestAuth
 
 ADDRESS = ""
 USERNAME = ""
@@ -19,6 +21,7 @@ TARGETAPI = ""
 
 #   this function is called when the user wants to grab certain information from the API.
 #   it only works through the webbrowser at the moment. A GUI solution is being worked on.
+
 def webbrowserapiwindow():
     global ADDRESS, USERNAME, PASSWORD, TARGETAPI
     webbrowser.open("http://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+TARGETAPI)
@@ -71,10 +74,11 @@ def main():
 
     tab0_layout = [[sg.Text('Camera Maintenance')],      
             [sg.Text('IP Address'), sg.Input(key='-ADDRESSMAINT-')],
-            [sg.Text('Username'), sg.Input(key='-USERNAMEMAINT-')],
-            [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
+            [sg.Text('Username '), sg.Input(key='-USERNAMEMAINT-')],
+            [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
             [sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
             [sg.Button('Reboot'), sg.Button('Snapshot')],
+            [sg.InputText("", key="-MAINTOUTPUT-", readonly=False, size=(40,2), background_color="white")],
             [sg.Button('Exit', key='-EXIT0-')]]
         
     tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
@@ -128,7 +132,7 @@ def main():
     tab_keys = ('-TAB0-','-TAB1-','-TAB2-','-TAB3-', '-TAB4-','-TAB5-','-TAB6-',)
 
     while True:
-        event, values = window.read()
+        event, values = window.read(timeout=10)
         #print(event, values)
 
 #   Camera Maintenance
@@ -137,32 +141,78 @@ def main():
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-            serialnoapi = threading.Thread(target=webbrowserapiwindow())
-            serialnoapi.start()
+            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                [sg.Popup("You must fill out all fields.")] 
+                window.close()
+                main()
+                #break
+            APIURL = ("http://"+ADDRESS+TARGETAPI)
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            response.encoding = 'utf-8-sig'
+            print("response code:" +str(response.status_code))
+            if response.status_code == 200:
+                window['-MAINTOUTPUT-'].update(str(response.text))
+                print("Login successful:\n" +str(response.text))
+            if response.status_code == 401:
+                [sg.Popup("Invalid Username and/or Password")]
+
 #   Camera Maintenance
         if event == 'Device Type':
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
-            serialnoapi = threading.Thread(target=webbrowserapiwindow())
-            serialnoapi.start()
+            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                [sg.Popup("You must fill out all fields.")] 
+                window.close()
+                main()
+                #break
+            APIURL = ("http://"+ADDRESS+TARGETAPI)
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            print("response code:" +str(response.status_code))
+            if response.status_code == 200:
+                window['-MAINTOUTPUT-'].update(str(response.text))
+                print("Login successful : " +str(response.text))
+            if response.status_code == 401:
+                [sg.Popup("Invalid Username and/or Password")]
 #   Camera Maintenance
         if event == 'Firmware Version':
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSoftwareVersion"
-            serialnoapi = threading.Thread(target=webbrowserapiwindow())
-            serialnoapi.start()
+            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                [sg.Popup("You must fill out all fields.")] 
+                window.close()
+                main()
+                #break
+            APIURL = ("http://"+ADDRESS+TARGETAPI)
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            print("response code:" +str(response.status_code))
+            if response.status_code == 200:
+                window['-MAINTOUTPUT-'].update(str(response.text))
+                print("Login successful : " +str(response.text))
+            if response.status_code == 401:
+                [sg.Popup("Invalid Username and/or Password")]
 #   Camera Maintenance
         if event == 'Reboot' and sg.popup_yes_no('This will restart your device, are you sure?') == 'Yes':
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             TARGETAPI = "/cgi-bin/magicBox.cgi?action=reboot"
-            serialnoapi = threading.Thread(target=webbrowserapiwindow())
-            serialnoapi.start()
+            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                [sg.Popup("You must fill out all fields.")] 
+                window.close()
+                main()
+                #break
+            APIURL = ("http://"+ADDRESS+TARGETAPI)
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            print("response code:" +str(response.status_code))
+            if response.status_code == 200:
+                window['-MAINTOUTPUT-'].update(str(response.text))
+                print("Login successful : " +str(response.text))
+            if response.status_code == 401:
+                [sg.Popup("Invalid Username and/or Password")]
 #   Camera Maintenance
         if event == 'Snapshot':
             ADDRESS = values['-ADDRESSMAINT-']
