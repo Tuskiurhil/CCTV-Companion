@@ -11,31 +11,38 @@ import time
 import requests
 from requests.auth import HTTPDigestAuth
 #   importing project files
-from rtsp import CCTV
+from cctvfunc import CCTV
 
 ADDRESS = ""
 USERNAME = ""
 PASSWORD = ""
 TARGETAPI = ""
 
-#   defining which animated GIF to use for loading screens.
-#loading_gif = r'loadingcircle.gif'
 
-#   this function is called when the user wants to grab certain information from the API.
-#   it only works through the webbrowser at the moment. A GUI solution is being worked on.
+#   specifying custom theme
+CCTV_Theme = {'BACKGROUND': '#006d74',
+               'TEXT': 'white',
+               'INPUT': '#DDE0DE',
+               'SCROLL': '#E3E3E3',
+               'TEXT_INPUT': 'black',
+               'BUTTON': ('black', '#f08000'),
+               'PROGRESS': ('#01826B', '#D0D0D0'),
+               'BORDER': 2,
+               'SLIDER_DEPTH': 0,
+               'PROGRESS_DEPTH': 0}
+sg.theme_add_new('CCTV_Theme', CCTV_Theme)
+sg.theme('CCTV_Theme')
+
 
 def main():
-#   Defining Colourscheme from PySimpleGUI Presets
-    sg.theme('DarkGrey5')
     MP1 = int()
     MP2 = int()
     MP4 = int()
-    MP5 = int()
     MP6 = int()
     MP8 = int()
     MP12 = int()
 
-    #global ADDRESS, USERNAME, PASSWORD, TARGETAPI#, loading_gif
+
 #   Loading and Displaying a Splashscreen upon start of the Software. If none is found, pass.
     try:
         splashscreen = "splashscreen.png"
@@ -77,8 +84,8 @@ def main():
                     [sg.Text('12 Megapixel'), sg.Input('', key='-#12MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL12', default=True, key='#12MPh265'), sg.Radio('H.264', 'CODECSEL12', key='#12MPh264')], #sg.Radio('MJPEG', 'CODECSEL12', key='#12MPMJPEG')],
                     [sg.Button('Calculate', key='-BANDWIDTHCALCULATE-'), sg.Button('Exit', key='-EXIT2-')],
 
-                    [sg.Text('Approximate Bandwidth Usage: '), sg.InputText("", key="-BandwidthResultTextKB-", readonly=True, size=(8,1), text_color="black"), sg.Text("Kilobit per second")],
-                    [sg.Text('Approximate Bandwidth Usage: '), sg.InputText("", key="-BandwidthResultTextMB-", readonly=True, size=(8,1), text_color="black"), sg.Text("Megabit per second")]]
+                    [sg.Text('Approximate Bandwidth Usage: '), sg.InputText("", key="-BandwidthResultTextKB-", readonly=True, size=(8,1), text_color="black"), sg.Text("Kilobit per second - (Kbps)")],
+                    [sg.Text('Approximate Bandwidth Usage: '), sg.InputText("", key="-BandwidthResultTextMB-", readonly=True, size=(8,1), text_color="black"), sg.Text("Megabit per second - (Mbps)")]]
 
     tab3_layout = [[sg.Text('IP Calculation')]]
 
@@ -116,45 +123,32 @@ def main():
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
-            #DeviceTypeAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
-            #HardwareVersionAPI = "/cgi-bin/magicBox.cgi?action=getHardwareVersion"
-            #SerialNumberAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-            #MachineNameAPI = "/cgi-bin/magicBox.cgi?action=getMachineName"
-            #SystemInformationAPI = "/cgi-bin/magicBox.cgi?action=getSystemInfo"
-            #VendorAPI = "/cgi-bin/magicBox.cgi?action=getVendor"
-            #SoftwareVersionAPI = "/cgi-bin/magicBox.cgi?action=getSoftwareVersion"
-            #OnVIFVersionAPI = "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=Onvif"
-            #HTTPVersionAPI = "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=CGI"
-            #DeviceClassAPI = "/cgi-bin/magicBox.cgi?action=getDeviceClass"
-            #InfoAllUsersAPI = "/cgi-bin/userManager.cgi?action=getUserInfoAll"
             diagnosticslist = [
                 "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getHardwareVersion", "/cgi-bin/magicBox.cgi?action=getSerialNo", "/cgi-bin/magicBox.cgi?action=getMachineName",
                 "/cgi-bin/magicBox.cgi?action=getSystemInfo", "/cgi-bin/magicBox.cgi?action=getVendor", "/cgi-bin/magicBox.cgi?action=getSoftwareVersion", "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=Onvif",
                 "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=CGI", "/cgi-bin/magicBox.cgi?action=getDeviceClass", "/cgi-bin/userManager.cgi?action=getUserInfoAll"
                 ]
-
+            progresstarget = 0
             if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
                 [sg.Popup("You must fill out all fields.")] 
                 window.close()
                 main()
-                #break
             diagfilename = ("diagnostics_"+ADDRESS+".txt")
             with open(diagfilename, 'w') as diagfile:
                 for apirequest in diagnosticslist:
-                    #print(apirequest)
                     APIURL = ("http://"+ADDRESS+apirequest)
                     response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-                    #print(response)
                     response.encoding = 'utf-8-sig'
-                    #print("response code:\n"+str(response.status_code))
                     if response.status_code == 200:
-                        #window['-MAINTOUTPUT-'].update(str(response.text))
                         print("\n"+apirequest+"\n" +str(response.text))
                         diagfile.write("\n"+apirequest+"\n" +str(response.text))
+                        progresstarget += 1
+                        
                     if response.status_code == 401:
                         [sg.Popup("Invalid Username and/or Password")]
             window['-MAINTOUTPUT-'].update(str("Diagnostics Saved!"))
             [sg.Popup("Diagnostics File saved as diagnostics_"+ADDRESS+".txt")]
+            progresstarget = 0
             
 
 #   Camera Maintenance
