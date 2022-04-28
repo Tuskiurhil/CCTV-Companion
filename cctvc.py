@@ -11,7 +11,7 @@ import time
 import requests
 from requests.auth import HTTPDigestAuth
 #   importing project files
-from cctvfunc import CCTV
+#from cctvfunc import CCTV
 
 ADDRESS = ""
 USERNAME = ""
@@ -33,6 +33,28 @@ CCTV_Theme = {'BACKGROUND': '#006d74',
 sg.theme_add_new('CCTV_Theme', CCTV_Theme)
 sg.theme('CCTV_Theme')
 
+#   Main function for RTSP stream. Will receive Arguments, construct them to a full address and then grab
+#   the stream with cv2.
+def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
+    #global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT
+    capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
+    while(capture.isOpened()):
+        ret, frame = capture.read()
+#   Allowing to resize the window
+        cv2.namedWindow(str(ADDRESS), cv2.WINDOW_NORMAL)
+        cv2.imshow(str(ADDRESS), frame)
+        if cv2.waitKey(20) & 0xFF == ord('Q'):
+            break
+#   Checks if the Window is being closed by pressing the "X" button, if the window becomes invisible it'll break
+        if cv2.getWindowProperty(str(ADDRESS), cv2.WND_PROP_VISIBLE) <1:
+            break
+    capture.release()
+    cv2.destroyAllWindows()
+
+
+
+def webbrowserapiwindow(ADDRESS, USERNAME, PASSWORD, TARGETAPI):
+    webbrowser.open("http://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+TARGETAPI)
 
 def main():
     MP1 = int()
@@ -61,9 +83,10 @@ def main():
             [sg.Text('IP Address'), sg.Input(key='-ADDRESSMAINT-')],
             [sg.Text('Username '), sg.Input(key='-USERNAMEMAINT-')],
             [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
-            [sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
-            [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File')],
-            [sg.InputText("", key="-MAINTOUTPUT-", readonly=False, size=(40,2), background_color="white")],
+            [sg.Button('Connect')],
+            #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
+            [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File')], 
+            [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
             [sg.Button('Exit', key='-EXIT0-')]]
         
     tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
@@ -153,26 +176,61 @@ def main():
 
 #   Camera Maintenance
     #   PTZ Control
-        if event == 'PTZ Control':
+        # if event == 'PTZ Control':
+        #     ADDRESS = values['-ADDRESSMAINT-']
+        #     USERNAME = values['-USERNAMEMAINT-']
+        #     PASSWORD = values['-PASSWORDMAINT-']
+        #     #TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+        #     if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+        #         [sg.Popup("You must fill out all fields.")] 
+        #         window.close()
+        #         main()
+        #         #break
+        #     #APIURL = ("http://"+ADDRESS+TARGETAPI)
+        #     APIURL = ("http://192.168.1.62/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=1&arg3=0")
+        #     response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+        #     response.encoding = 'utf-8-sig'
+        #     print("response code:\n"+str(response.status_code))
+        #     if response.status_code == 200:
+        #         window['-MAINTOUTPUT-'].update(str(response.text))
+        #         print("\nLogin successful:\n" +str(response.text))
+        #     if response.status_code == 401:
+        #         [sg.Popup("Invalid Username and/or Password")]
+
+#   Camera Maintenance
+    #   --HTTP-AUth DigestConnection Check--
+        if event == 'Connect':
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
-            #TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+            diagnosticslist = [
+                "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getSerialNo", "/cgi-bin/magicBox.cgi?action=getSoftwareVersion",
+                ]
             if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
                 [sg.Popup("You must fill out all fields.")] 
                 window.close()
                 main()
                 #break
-            #APIURL = ("http://"+ADDRESS+TARGETAPI)
-            APIURL = ("http://192.168.1.62/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=1&arg3=0")
+            APIURL = ("http://"+ADDRESS+TARGETAPI)
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             response.encoding = 'utf-8-sig'
             print("response code:\n"+str(response.status_code))
             if response.status_code == 200:
-                window['-MAINTOUTPUT-'].update(str(response.text))
-                print("\nLogin successful:\n" +str(response.text))
+                readout = []
+                for apirequest in diagnosticslist:
+                    APIURL = ("http://"+ADDRESS+apirequest)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+                    response.encoding = 'utf-8-sig'
+                    if response.status_code == 200:
+                        print("\n"+apirequest+"\n" +str(response.text))
+                        readout.append(str(response.text))
+                fixreadout = "".join(readout)
+                window['-MAINTOUTPUT-'].update("Connected with: "+ADDRESS+"\n"+str(fixreadout))
+                # window['-MAINTOUTPUT-'].update(str(response.text))
+                # print("\nLogin successful:\n" +str(response.text))
             if response.status_code == 401:
-                [sg.Popup("Invalid Username and/or Password")]
+                window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
 
 #   Camera Maintenance
     #   Serial No.
@@ -266,7 +324,7 @@ def main():
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             TARGETAPI = "/cgi-bin/snapshot.cgi"
-            serialnoapi = threading.Thread(target=CCTV.webbrowserapiwindow(ADDRESS, USERNAME, PASSWORD, TARGETAPI))
+            serialnoapi = threading.Thread(target=webbrowserapiwindow(ADDRESS, USERNAME, PASSWORD, TARGETAPI))
             serialnoapi.start()
 
 #   RTSP Stream
@@ -278,9 +336,9 @@ def main():
                 CHANNELSELECT = '0'
             elif values["-CHANNEL1-"] == True:
                 CHANNELSELECT = '1'
-            camstream = multiprocessing.Process(target=CCTV.opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,))
+            camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,))
             print("Opening RTSP Stream, please wait a moment...")
-            camstream.daemon = True
+            #camstream.daemon = True
             camstream.start()
             #for i in range(300):
             #    sg.popup_animated(loading_gif, time_between_frames=90)
