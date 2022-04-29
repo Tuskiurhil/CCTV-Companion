@@ -85,16 +85,18 @@ def main():
             [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
             [sg.Button('Connect')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
+            [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
+            [sg.Button('Open RTSP Stream'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
             [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File')], 
             [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
             [sg.Button('Exit', key='-EXIT0-')]]
         
-    tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
-            [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
-            [sg.Text('Username'), sg.Input(key='-USERNAME-')],
-            [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],
-            [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
-            [sg.Button('Open'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface'), sg.Button('Exit', key='-EXIT1-'), sg.Button('Help')]]
+    # tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
+    #         [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
+    #         [sg.Text('Username'), sg.Input(key='-USERNAME-')],
+    #         [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],
+    #         [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
+    #         [sg.Button('Open'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface'), sg.Button('Exit', key='-EXIT1-'), sg.Button('Help')]]
             
     tab2_layout =   [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
                     [sg.Text('Resolution'), sg.Text('# of Cameras'), sg.Text('Codec')],
@@ -121,7 +123,7 @@ def main():
 
 #   Tab Group Layout (must contain ONLY tabs)
     tab_group_layout = [[sg.Tab('Camera Maintenance', tab0_layout, key='-TAB0-'),
-                        sg.Tab('RTSP Stream', tab1_layout, key='-TAB1-'),
+                        #sg.Tab('RTSP Stream', tab1_layout, key='-TAB1-'),
                         sg.Tab('Capacity Calculation', tab2_layout, key='-TAB2-'),
                         sg.Tab('IP Calculation', tab3_layout, key='-TAB3-'),
                         sg.Tab('Lens Calculation', tab4_layout, key='-TAB4-'),
@@ -233,70 +235,6 @@ def main():
                 window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
 
 #   Camera Maintenance
-    #   Serial No.
-        if event == 'Serial No.':
-            ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                [sg.Popup("You must fill out all fields.")] 
-                window.close()
-                main()
-                #break
-            APIURL = ("http://"+ADDRESS+TARGETAPI)
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            response.encoding = 'utf-8-sig'
-            print("response code:\n"+str(response.status_code))
-            if response.status_code == 200:
-                window['-MAINTOUTPUT-'].update(str(response.text))
-                print("\nLogin successful:\n" +str(response.text))
-            if response.status_code == 401:
-                [sg.Popup("Invalid Username and/or Password")]
-
-#   Camera Maintenance
-    #   Device Type
-        if event == 'Device Type':
-            ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
-            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                [sg.Popup("You must fill out all fields.")] 
-                window.close()
-                main()
-                #break
-            APIURL = ("http://"+ADDRESS+TARGETAPI)
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print("response code:\n" +str(response.status_code))
-            if response.status_code == 200:
-                window['-MAINTOUTPUT-'].update(str(response.text))
-                print("\nLogin successful:\n" +str(response.text))
-            if response.status_code == 401:
-                [sg.Popup("Invalid Username and/or Password")]
-
-#   Camera Maintenance
-    #   Firmware Version
-        if event == 'Firmware Version':
-            ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSoftwareVersion"
-            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                [sg.Popup("You must fill out all fields.")] 
-                window.close()
-                main()
-                #break
-            APIURL = ("http://"+ADDRESS+TARGETAPI)
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print("response code:\n" +str(response.status_code))
-            if response.status_code == 200:
-                window['-MAINTOUTPUT-'].update(str(response.text))
-                print("\nLogin successful:\n" +str(response.text))
-            if response.status_code == 401:
-                [sg.Popup("Invalid Username and/or Password")]
-
-#   Camera Maintenance
     #   Rebooting the Camera
         if event == 'Reboot' and sg.popup_yes_no('This will restart your device, are you sure?') == 'Yes':
             ADDRESS = values['-ADDRESSMAINT-']
@@ -328,10 +266,10 @@ def main():
             serialnoapi.start()
 
 #   RTSP Stream
-        if event == 'Open':
-            ADDRESS = values['-ADDRESS-']
-            USERNAME = values['-USERNAME-']
-            PASSWORD = values['-PASSWORD-']
+        if event == 'Open RTSP Stream':
+            ADDRESS = values['-ADDRESSMAINT-']
+            USERNAME = values['-USERNAMEMAINT-']
+            PASSWORD = values['-PASSWORDMAINT-']
             if values["-CHANNEL0-"] == True:
                 CHANNELSELECT = '0'
             elif values["-CHANNEL1-"] == True:
@@ -345,19 +283,19 @@ def main():
             #sg.popup_animated(None)
 
         if event == 'Copy RTSP Link':
-            ADDRESS = values['-ADDRESS-']
-            USERNAME = values['-USERNAME-']
-            PASSWORD = values['-PASSWORD-']
+            ADDRESS = values['-ADDRESSMAINT-']
+            USERNAME = values['-USERNAMEMAINT-']
+            PASSWORD = values['-PASSWORDMAINT-']
             if values["-CHANNEL0-"] == True:
                 CHANNELSELECT = '0'
             elif values["-CHANNEL1-"] == True:
                 CHANNELSELECT = '1'
             pyperclip.copy("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
             #full_link_copy = ("rtsp://"+USERNAME+":"+"**********"+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
-            sg.popup_no_wait('Link copied')
+            sg.popup_no_wait('Link copied to clipboard')
 
         if event == 'Web Interface':
-            ADDRESS = values['-ADDRESS-']
+            ADDRESS = values['-ADDRESSMAINT-']
             webbrowser.open(ADDRESS)
 
         if event == 'Help':
