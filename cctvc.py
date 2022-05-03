@@ -32,35 +32,52 @@ CCTV_Theme = {'BACKGROUND': '#006d74',
                'SLIDER_DEPTH': 0,
                'PROGRESS_DEPTH': 0}
 sg.theme_add_new('CCTV_Theme', CCTV_Theme)
-sg.theme('CCTV_Theme')
+sg.theme('Darkgrey5')
 
 
 def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
     while True:
         event = keyboard.read_event()
-        if event.event_type == keyboard.KEY_DOWN and event.name == 's':
+        if event.event_type == keyboard.KEY_DOWN and event.name == 's' or 'down arrow':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'w':
+
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'w' or 'up arrow':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'a':
+
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'a' or 'left arrow':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'd':
+
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'd' or 'right arrow':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'q' or 'num -':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            time.sleep(1)
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'e' or 'num +':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            time.sleep(1)
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
 
 
@@ -81,10 +98,13 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
 #   Allowing to resize the window
         cv2.namedWindow(str(ADDRESS), cv2.WINDOW_NORMAL)
         cv2.imshow(str(ADDRESS), frame)
-        if cv2.waitKey(20) & 0xFF == ord('Q'):
+        if cv2.waitKey(20) & 0xFF == ord('p'):
             break
 
-        
+#   Taking a Snapshot of the live stream        
+        if cv2.waitKey(10) & 0xFF == ord('b'):
+            stream_screenshot = capture.read()[1]
+            cv2.imwrite("screenshot"+".png", stream_screenshot)
 
 #   Checks if the Window is being closed by pressing the "X" button, if the window becomes invisible it'll break
         if cv2.getWindowProperty(str(ADDRESS), cv2.WND_PROP_VISIBLE) <1:
@@ -217,30 +237,6 @@ def main():
             [sg.Popup("Diagnostics File saved as diagnostics_"+ADDRESS+".txt")]
             progresstarget = 0
             
-
-#   Camera Maintenance
-    #   PTZ Control
-        # if event == 'PTZ Control':
-        #     ADDRESS = values['-ADDRESSMAINT-']
-        #     USERNAME = values['-USERNAMEMAINT-']
-        #     PASSWORD = values['-PASSWORDMAINT-']
-        #     #TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-        #     if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-        #         [sg.Popup("You must fill out all fields.")] 
-        #         window.close()
-        #         main()
-        #         #break
-        #     #APIURL = ("http://"+ADDRESS+TARGETAPI)
-        #     APIURL = ("http://192.168.1.62/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=1&arg3=0")
-        #     response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-        #     response.encoding = 'utf-8-sig'
-        #     print("response code:\n"+str(response.status_code))
-        #     if response.status_code == 200:
-        #         window['-MAINTOUTPUT-'].update(str(response.text))
-        #         print("\nLogin successful:\n" +str(response.text))
-        #     if response.status_code == 401:
-        #         [sg.Popup("Invalid Username and/or Password")]
-
 #   Camera Maintenance
     #   --HTTP-AUth DigestConnection Check--
         if event == 'Connect':
