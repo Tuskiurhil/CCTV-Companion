@@ -6,6 +6,7 @@ import pyperclip
 import os 
 import threading
 import multiprocessing
+import keyboard
 import sys
 import time
 import requests
@@ -33,11 +34,48 @@ CCTV_Theme = {'BACKGROUND': '#006d74',
 sg.theme_add_new('CCTV_Theme', CCTV_Theme)
 sg.theme('CCTV_Theme')
 
+
+def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
+    while True:
+        event = keyboard.read_event()
+        if event.event_type == keyboard.KEY_DOWN and event.name == 's':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            time.sleep(1)
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'w':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            time.sleep(1)
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'a':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            time.sleep(1)
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'd':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            time.sleep(1)
+            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+
+
 #   Main function for RTSP stream. Will receive Arguments, construct them to a full address and then grab
 #   the stream with cv2.
 def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
+
     #global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT
     capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
+
+#   PTZ Control
+    ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
+    ptz_control.daemon = True
+    ptz_control.start()
+
     while(capture.isOpened()):
         ret, frame = capture.read()
 #   Allowing to resize the window
@@ -45,9 +83,13 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
         cv2.imshow(str(ADDRESS), frame)
         if cv2.waitKey(20) & 0xFF == ord('Q'):
             break
+
+        
+
 #   Checks if the Window is being closed by pressing the "X" button, if the window becomes invisible it'll break
         if cv2.getWindowProperty(str(ADDRESS), cv2.WND_PROP_VISIBLE) <1:
             break
+            #ptz_control(exit)
     capture.release()
     cv2.destroyAllWindows()
 
