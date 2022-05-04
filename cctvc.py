@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+from distutils.cmd import Command
+from traceback import print_list
 import PySimpleGUI as sg
 import cv2
 import webbrowser
@@ -38,47 +40,62 @@ sg.theme('Darkgrey5')
 def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
     while True:
         event = keyboard.read_event()
-        if event.event_type == keyboard.KEY_DOWN and event.name == 's' or 'down arrow':
+        if event.event_type == keyboard.KEY_DOWN and event.name == 's':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
 
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'w' or 'up arrow':
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'w':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
 
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'a' or 'left arrow':
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'a':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
 
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'd' or 'right arrow':
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'd':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
 
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'q' or 'num -':
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'q':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
 
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'e' or 'num +':
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'e':
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
             time.sleep(1)
             APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'f':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/devVideoInput.cgi?action=autoFocus"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            print("Autofocusing...")
+
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'n':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/rainBrush.cgi?action=moveContinuously&interval=5"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            print("Wiper ON")
+            
+        if event.event_type == keyboard.KEY_DOWN and event.name == 'm':
+            APIURL = "http://"+ADDRESS+"/cgi-bin/rainBrush.cgi?action=stopMove"
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+            print("Wiper OFF")
 
 
 #   Main function for RTSP stream. Will receive Arguments, construct them to a full address and then grab
@@ -96,9 +113,13 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
     while(capture.isOpened()):
         ret, frame = capture.read()
 #   Allowing to resize the window
+        text_color_top = (255,255,255)
+        text_color_bot = (0,0,0)
         cv2.namedWindow(str(ADDRESS), cv2.WINDOW_NORMAL)
+        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_PLAIN, 2.0, text_color_bot, thickness=3)
+        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_PLAIN, 2.0, text_color_top, thickness=2)
         cv2.imshow(str(ADDRESS), frame)
-        if cv2.waitKey(20) & 0xFF == ord('p'):
+        if cv2.waitKey(10) & 0xFF == ord('p'):
             break
 
 #   Taking a Snapshot of the live stream        
@@ -109,7 +130,6 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
 #   Checks if the Window is being closed by pressing the "X" button, if the window becomes invisible it'll break
         if cv2.getWindowProperty(str(ADDRESS), cv2.WND_PROP_VISIBLE) <1:
             break
-            #ptz_control(exit)
     capture.release()
     cv2.destroyAllWindows()
 
@@ -145,13 +165,13 @@ def main():
             [sg.Text('IP Address'), sg.Input(key='-ADDRESSMAINT-')],
             [sg.Text('Username '), sg.Input(key='-USERNAMEMAINT-')],
             [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
-            [sg.Button('Connect')],
+            [sg.Button('Check')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
             [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
-            [sg.Button('Open RTSP Stream'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
-            [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File')], 
+            [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
+            [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')], 
             [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
-            [sg.Button('Exit', key='-EXIT0-')]]
+            [sg.Button('Exit', key='-EXIT0-'), sg.Push(), sg.Button('Help', key='-MAINTHELP-')]]
         
     # tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
     #         [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
@@ -187,8 +207,8 @@ def main():
     tab_group_layout = [[sg.Tab('Camera Maintenance', tab0_layout, key='-TAB0-'),
                         #sg.Tab('RTSP Stream', tab1_layout, key='-TAB1-'),
                         sg.Tab('Capacity Calculation', tab2_layout, key='-TAB2-'),
-                        sg.Tab('IP Calculation', tab3_layout, key='-TAB3-'),
-                        sg.Tab('Lens Calculation', tab4_layout, key='-TAB4-'),
+                        #sg.Tab('IP Calculation', tab3_layout, key='-TAB3-'),
+                        #sg.Tab('Lens Calculation', tab4_layout, key='-TAB4-'),
                         sg.Tab('About', tab6_layout, key='-TAB6-'),
                         ]]
 
@@ -239,7 +259,7 @@ def main():
             
 #   Camera Maintenance
     #   --HTTP-AUth DigestConnection Check--
-        if event == 'Connect':
+        if event == 'Check':
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
@@ -303,8 +323,34 @@ def main():
             serialnoapi = threading.Thread(target=webbrowserapiwindow(ADDRESS, USERNAME, PASSWORD, TARGETAPI))
             serialnoapi.start()
 
+#   Camera Maintenance
+    #   Factory Resetting the Camera
+        #if event == 'Factory Reset' and sg.popup_yes_no('CAUTION:\nThis will reset your camera and return all Settings to their factory default value,\nare you sure?') == 'Yes':
+        
+        if event == 'Factory Reset' and sg.popup_yes_no("This will factory reset your device, are you sure?\nAll settings will be returned to their default value!") == "Yes":
+            if sg.popup_yes_no("This change cannot be reverted!", text_color="red", font="bold") == "Yes":
+                sg.popup_timed("Factory Resetting...")
+                ADDRESS = values['-ADDRESSMAINT-']
+                USERNAME = values['-USERNAMEMAINT-']
+                PASSWORD = values['-PASSWORDMAINT-']
+                TARGETAPI = "/cgi-bin/magicBox.cgi?action=resetSystemEx&type=0"
+                if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                    [sg.Popup("You must fill out all fields.")] 
+                    window.close()
+                    main()
+                    #break
+                if len(values['-ADDRESSMAINT-']) != 0 or len(values['-USERNAMEMAINT-']) != 0 or len(values['-PASSWORDMAINT-']) != 0:
+                    APIURL = ("http://"+ADDRESS+TARGETAPI)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+                    print("response code:\n" +str(response.status_code))
+                    if response.status_code == 200:
+                        window['-MAINTOUTPUT-'].update(str(response.text))
+                        print("\nLogin successful:\n" +str(response.text))
+                    if response.status_code == 401:
+                        [sg.Popup("Invalid Username and/or Password")]
+
 #   RTSP Stream
-        if event == 'Open RTSP Stream':
+        if event == 'Live View':
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
@@ -316,9 +362,8 @@ def main():
             print("Opening RTSP Stream, please wait a moment...")
             #camstream.daemon = True
             camstream.start()
-            #for i in range(300):
-            #    sg.popup_animated(loading_gif, time_between_frames=90)
-            #sg.popup_animated(None)
+
+            
 
         if event == 'Copy RTSP Link':
             ADDRESS = values['-ADDRESSMAINT-']
@@ -336,14 +381,19 @@ def main():
             ADDRESS = values['-ADDRESSMAINT-']
             webbrowser.open(ADDRESS)
 
-        if event == 'Help':
+        if event == '-MAINTHELP-':
             sg.popup(
-                'RTSP Stream\n\n'
-                'This Window can be used to open the RTSP Stream of an IP-Camera.\n\n'
-                "Enter the IP-Address of your desired Camera (If you're using the Default RTSP-Port 554 then you don't need to enter the Port)\n\n"
-                "Clicking 'Copy RTSP Link' will take the Input of the above fields, merge them together and copy a usable RTSP Link to your clipboard\n\n"
-                "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n"
-                "You can select which Stream you want to see by clicking either 'Main Stream' or 'Sub Stream'\n")
+                'Camera Maintenance\n\n'
+                'Use this Window to do maintenance on your cameras using the Dahua API\n\n'
+                "Enter the IP-Address, Username and Password of your chosen device and click 'Check' to see Device Information\n\n"
+                "Live View allows you to see the live-stream of your Camera.\n\n"
+                "~PTZ-Controls:~\n"
+                "W,A,S,D    -   Moving Up, Left, Down, Right\n"
+                "Q,E    -   Zoom Out, Zoom In\n"
+                "F  -   Autofocus\n\n"
+                "You can select which Stream you want to see by clicking either 'Main Stream' or 'Sub Stream'\n\n"
+                "Clicking on 'Save Diagnostics File' will create a text file that includes some of the Settings of your camera.\n\n"
+                "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n")
 
 #   Bandwidth Calculation
         if event == '-BANDWIDTHCALCULATE-':
@@ -410,19 +460,6 @@ def main():
                 bandwidthresultMB = ((MP1 + MP2 + MP4 + MP5 + MP6 + MP8 + MP12) / 1000)
                 window['-BandwidthResultTextMB-'].update(bandwidthresultMB)
                     
-#   Controlex
-        if event == '-CONTROLEXWEBSITE-':
-            webbrowser.open('https://controlex.eu')
-
-        if event == '-CONTROLEXWEBSHOP-':
-            webbrowser.open('https://controlex-shop.com')
-
-        if event == '-CONTROLEXSUPPORTPORTAL-':
-            webbrowser.open('https://controlex-shop.freshdesk.com/support/login')
-
-        if event == '-CONTROLEXHELP-':
-            [sg.Popup('Controlex\n\n'
-                        'Use the links on this Site to quickly navigate to our Website, Online-Shop or Helpdesk\n')]
 
         if event == sg.WIN_CLOSED or event == '-EXIT0-' or event == '-EXIT1-' or event == '-EXIT2-' or event == '-EXIT3-' or event == '-EXIT4-' or event == '-EXIT5-' or event == '-EXIT6-':
             break
