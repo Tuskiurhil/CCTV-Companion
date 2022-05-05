@@ -12,6 +12,8 @@ import keyboard
 import sys
 import time
 import requests
+import platform
+import subprocess
 from requests.auth import HTTPDigestAuth
 #   importing project files
 #from cctvfunc import CCTV
@@ -35,6 +37,15 @@ CCTV_Theme = {'BACKGROUND': '#006d74',
                'PROGRESS_DEPTH': 0}
 sg.theme_add_new('CCTV_Theme', CCTV_Theme)
 sg.theme('Darkgrey5')
+
+def ping(host):
+    # Option for the number of packets as a function of
+    param = '-n' if platform.system().lower()=='windows' else '-c'
+
+    # Building the command. Ex: "ping -c 1 google.com"
+    command = ['ping', param, '1', host]
+
+    return subprocess.call(command) == 0
 
 
 def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
@@ -104,7 +115,8 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
 
     #global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT
     capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
-
+    #print(capture)
+    
 #   PTZ Control
     ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
     ptz_control.daemon = True
@@ -171,7 +183,7 @@ def main():
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
             [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')], 
             [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
-            [sg.Button('Exit', key='-EXIT0-'), sg.Push(), sg.Button('Help', key='-MAINTHELP-')]]
+            [sg.Button('Exit', key='-EXIT0-'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="red")]]
         
     # tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
     #         [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
@@ -358,12 +370,26 @@ def main():
                 CHANNELSELECT = '0'
             elif values["-CHANNEL1-"] == True:
                 CHANNELSELECT = '1'
-            camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,))
-            print("Opening RTSP Stream, please wait a moment...")
-            #camstream.daemon = True
-            camstream.start()
-
-            
+            if ping(ADDRESS) == True:
+                TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+                if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                        [sg.Popup("You must fill out all fields.")] 
+                        window.close()
+                        main()
+                        #break
+                APIURL = ("http://"+ADDRESS+TARGETAPI)
+                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+                response.encoding = 'utf-8-sig'
+                print("response code:\n"+str(response.status_code))
+                if response.status_code == 200:
+                    camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,))
+                    print("Opening RTSP Stream, please wait a moment...")
+                    #camstream.daemon = True
+                    camstream.start()
+                if response.status_code == 401:
+                    window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+            if ping(ADDRESS) == False:
+                window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
 
         if event == 'Copy RTSP Link':
             ADDRESS = values['-ADDRESSMAINT-']
@@ -389,8 +415,9 @@ def main():
                 "Live View allows you to see the live-stream of your Camera.\n\n"
                 "~PTZ-Controls:~\n"
                 "W,A,S,D    -   Moving Up, Left, Down, Right\n"
-                "Q,E    -   Zoom Out, Zoom In\n"
-                "F  -   Autofocus\n\n"
+                "Q,E        -   Zoom Out, Zoom In\n"
+                "F          -   Autofocus\n"
+                "N,M        -   Wiper On/Off\n\n"
                 "You can select which Stream you want to see by clicking either 'Main Stream' or 'Sub Stream'\n\n"
                 "Clicking on 'Save Diagnostics File' will create a text file that includes some of the Settings of your camera.\n\n"
                 "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n")
