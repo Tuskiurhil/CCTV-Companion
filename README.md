@@ -12,6 +12,9 @@ A Python3 based Tool to help in CCTV related work
 
 CCTV-Companion is a Python-Script that aims to help in both planning, setting up and doing maintenance on your Dahua Technology Equipment.
 
+![image](https://user-images.githubusercontent.com/79027579/167003822-10998845-1840-4420-9ab8-802695f75ffd.png)
+
+
 Windows .exe File: (05. May 2022, 10:16 AM)
 https://www.dropbox.com/s/1rbebdu6feqkbt7/CCTV%20Companion%20v0.1.exe?raw=1
 
