@@ -12,6 +12,9 @@ A Python3 based Tool to help in CCTV related work
 
 CCTV-Companion is a Python-Script that aims to help in both planning, setting up and doing maintenance on CCTV-Equipment.
 
+Windows .exe File: (05. May 2022, 10:16 AM)
+https://www.dropbox.com/s/1rbebdu6feqkbt7/CCTV%20Companion%20v0.1.exe?raw=1
+
 ## Current Features
 
 Opening Main and/or Substream of your Dahua Camera (RTSP Stream). You can also copy the RTSP-Link to your clipboard after you entered the IP-Address, Username and Password, or open the Web-Interface after you typed just the IP-Address.
