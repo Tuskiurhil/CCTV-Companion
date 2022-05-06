@@ -151,13 +151,15 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD):
     #print(capture)
     SMD
 #   PTZ Control
-    #ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
-    #ptz_control.daemon = True
-    #ptz_control.start()
+    ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
+    ptz_control.daemon = True
+    ptz_control.start()
 
     while(capture.isOpened()):
-        success,img = capture.read()
-        classIds, confs, bbox = net.detect(img,confThreshold=thresholdValue)
+        
+        if SMD == "1":
+            success,img = capture.read()
+            classIds, confs, bbox = net.detect(img,confThreshold=thresholdValue)
         ret, frame = capture.read()
 #   Allowing to resize the window
         text_color_top = (255,255,255)
@@ -168,9 +170,14 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD):
             if len(classIds) != 0:
                 #print("Pass")
                 for classId, confidence, box in zip(classIds.flatten(),confs.flatten(),bbox):
-                    cv2.rectangle(frame, box, color=(0,255,0),thickness=2)
-                    cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
-                    cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+                    if classId == 1:
+                        cv2.rectangle(frame, box, color=(0,0,255),thickness=2)
+                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+                    else: 
+                        cv2.rectangle(frame, box, color=(0,255,0),thickness=2)
+                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
                     if classId == int(1) and detectedObjectResponse_isRunning == 0:
                         detection = threading.Thread(target=detectedObjectResponse)
                         # detection = multiprocessing.Process(target=detectedObjectResponse, args=())
