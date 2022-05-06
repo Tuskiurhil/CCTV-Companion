@@ -44,7 +44,7 @@ configPath = "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
 weightsPath = "frozen_inference_graph.pb"
 
 net = cv2.dnn_DetectionModel(weightsPath,configPath)
-net.setInputSize(320,320)
+net.setInputSize(340,340) # Accuracy of detection
 net.setInputScale(1.0/ 127.5)
 net.setInputMean((127.5, 127.5, 127.5))
 net.setInputSwapRB(True)
@@ -171,11 +171,11 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD):
                 #print("Pass")
                 for classId, confidence, box in zip(classIds.flatten(),confs.flatten(),bbox):
                     if classId == 1:
-                        cv2.rectangle(frame, box, color=(0,0,255),thickness=2)
+                        cv2.rectangle(frame, box, color=(0,0,255),thickness=1)
                         cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
                         cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
                     else: 
-                        cv2.rectangle(frame, box, color=(0,255,0),thickness=2)
+                        cv2.rectangle(frame, box, color=(0,255,0),thickness=1)
                         cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
                         cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
                     if classId == int(1) and detectedObjectResponse_isRunning == 0:
