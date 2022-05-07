@@ -1,5 +1,7 @@
 #!/usr/bin/env python3
-from distutils.cmd import Command
+from concurrent.futures import process
+#from distutils.cmd import Command
+from pickle import FALSE
 from traceback import print_list
 import PySimpleGUI as sg
 import cv2
@@ -23,6 +25,31 @@ USERNAME = ""
 PASSWORD = ""
 TARGETAPI = ""
 
+detectedObjectResponse_isRunning = 0
+
+# _________________________________________
+#   Object Recognition Parameters
+thresholdValue = 0.57
+
+windowName = "Output"
+classNames = []
+classFile = "coco.names"
+with open(classFile,'rt') as f:
+    #classNames = f.read().rstrip('\n').split('\n')
+    classNames = [line.rstrip() for line in f]
+    #classNames = [line.lstrip() for line in f]
+# print(classNames)
+
+configPath = "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
+weightsPath = "frozen_inference_graph.pb"
+
+net = cv2.dnn_DetectionModel(weightsPath,configPath)
+net.setInputSize(340,340) # Accuracy of detection
+net.setInputScale(1.0/ 127.5)
+net.setInputMean((127.5, 127.5, 127.5))
+net.setInputSwapRB(True)
+# _________________________________________
+
 
 #   specifying custom theme
 CCTV_Theme = {'BACKGROUND': '#006d74',
@@ -38,6 +65,19 @@ CCTV_Theme = {'BACKGROUND': '#006d74',
 sg.theme_add_new('CCTV_Theme', CCTV_Theme)
 sg.theme('Darkgrey5')
 
+def splashscreen():
+    #   Loading and Displaying a Splashscreen upon start of the Software. If none is found, pass.
+    try:
+        splashscreen = "splashscreen.png"
+        isExist = os.path.exists(splashscreen)
+        if isExist == True:
+            DISPLAY_TIME_MILLISECONDS = 600
+            sg.Window('Splashscreen', [[sg.Image(splashscreen)]], transparent_color=sg.theme_background_color(), no_titlebar=True, keep_on_top=True).read(timeout=DISPLAY_TIME_MILLISECONDS, close=True)
+        elif isExist == False:
+            pass
+    except:
+        pass
+
 def ping(host):
     # Option for the number of packets as a function of
     param = '-n' if platform.system().lower()=='windows' else '-c'
@@ -47,6 +87,11 @@ def ping(host):
 
     return subprocess.call(command) == 0
 
+def detectedObjectResponse():
+    global detectedObjectResponse_isRunning
+    print("Person detected!")
+    time.sleep(8)
+    detectedObjectResponse_isRunning = 0
 
 def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
     while True:
@@ -111,31 +156,53 @@ def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
 
 #   Main function for RTSP stream. Will receive Arguments, construct them to a full address and then grab
 #   the stream with cv2.
-def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
-
-    #global ADDRESS, USERNAME, PASSWORD, CHANNELSELECT
-    capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
-    #print(capture)
-    
+def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD, WEBCAM):
+    global detectedObjectResponse_isRunning
+    if WEBCAM == "1":
+        capture = cv2.VideoCapture(0)
+    elif WEBCAM == "0":
+        capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
+    SMD
 #   PTZ Control
     ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
     ptz_control.daemon = True
     ptz_control.start()
 
     while(capture.isOpened()):
+        
+        if SMD == "1":
+            success,img = capture.read()
+            classIds, confs, bbox = net.detect(img,confThreshold=thresholdValue)
         ret, frame = capture.read()
+
 #   Allowing to resize the window
         text_color_top = (255,255,255)
         text_color_bot = (0,0,0)
         cv2.namedWindow(str(ADDRESS), cv2.WINDOW_NORMAL)
-        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_PLAIN, 2.0, text_color_bot, thickness=3)
-        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_PLAIN, 2.0, text_color_top, thickness=2)
+        #   Drawing Rectangles and Names for Object Recognition
+        if SMD == "1":
+            if len(classIds) != 0:
+                for classId, confidence, box in zip(classIds.flatten(),confs.flatten(),bbox):
+                    if classId == 1:
+                        cv2.rectangle(frame, box, color=(0,0,255),thickness=2)
+                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+                    else: 
+                        cv2.rectangle(frame, box, color=(0,255,0),thickness=1)
+                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+                    if classId == int(1) and detectedObjectResponse_isRunning == 0:
+                        detection = threading.Thread(target=detectedObjectResponse)
+                        detection.start()
+                        detectedObjectResponse_isRunning = 1
+        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
+        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
         cv2.imshow(str(ADDRESS), frame)
-        if cv2.waitKey(10) & 0xFF == ord('p'):
+        if cv2.waitKey(1) & 0xFF == ord('p'):
             break
 
 #   Taking a Snapshot of the live stream        
-        if cv2.waitKey(10) & 0xFF == ord('b'):
+        if cv2.waitKey(1) & 0xFF == ord('b'):
             stream_screenshot = capture.read()[1]
             cv2.imwrite("screenshot"+".png", stream_screenshot)
 
@@ -144,6 +211,7 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT):
             break
     capture.release()
     cv2.destroyAllWindows()
+    WEBCAM = "0"
 
 
 
@@ -158,18 +226,7 @@ def main():
     MP8 = int()
     MP12 = int()
 
-
-#   Loading and Displaying a Splashscreen upon start of the Software. If none is found, pass.
-    try:
-        splashscreen = "splashscreen.png"
-        isExist = os.path.exists(splashscreen)
-        if isExist == True:
-            DISPLAY_TIME_MILLISECONDS = 600
-            sg.Window('Window Title', [[sg.Image(splashscreen)]], transparent_color=sg.theme_background_color(), no_titlebar=True, keep_on_top=True).read(timeout=DISPLAY_TIME_MILLISECONDS, close=True)
-        elif isExist == False:
-            pass
-    except:
-        pass
+    splashscreen()
 
 #   Tab Layout Definition for each window
 
@@ -179,7 +236,7 @@ def main():
             [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
             [sg.Button('Check')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
-            [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
+            [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
             [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')], 
             [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
@@ -366,30 +423,42 @@ def main():
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
+            if values["-SMD-"] == True:
+                SMD = "1"
+            elif values["-SMD-"] == False:
+                SMD = "0"
             if values["-CHANNEL0-"] == True:
                 CHANNELSELECT = '0'
             elif values["-CHANNEL1-"] == True:
                 CHANNELSELECT = '1'
-            if ping(ADDRESS) == True:
-                TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-                if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                        [sg.Popup("You must fill out all fields.")] 
-                        window.close()
-                        main()
-                        #break
-                APIURL = ("http://"+ADDRESS+TARGETAPI)
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-                response.encoding = 'utf-8-sig'
-                print("response code:\n"+str(response.status_code))
-                if response.status_code == 200:
-                    camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,))
-                    print("Opening RTSP Stream, please wait a moment...")
+            if values['-ADDRESSMAINT-'] == "webcam":
+                WEBCAM = "1"
+                camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
+                print("Opening Webcam Stream, please wait a moment...")
                     #camstream.daemon = True
-                    camstream.start()
-                if response.status_code == 401:
-                    window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
-            if ping(ADDRESS) == False:
-                window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
+                camstream.start()
+            else:
+                WEBCAM = "0"
+                if ping(ADDRESS) == True:
+                    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+                    if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                            [sg.Popup("You must fill out all fields.")] 
+                            window.close()
+                            main()
+                            #break
+                    APIURL = ("http://"+ADDRESS+TARGETAPI)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+                    response.encoding = 'utf-8-sig'
+                    print("response code:\n"+str(response.status_code))
+                    if response.status_code == 200:
+                        camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
+                        print("Opening RTSP Stream, please wait a moment...")
+                        #camstream.daemon = True
+                        camstream.start()
+                    if response.status_code == 401:
+                        window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+                if ping(ADDRESS) == False:
+                    window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
 
         if event == 'Copy RTSP Link':
             ADDRESS = values['-ADDRESSMAINT-']
@@ -420,7 +489,7 @@ def main():
                 "N,M        -   Wiper On/Off\n\n"
                 "You can select which Stream you want to see by clicking either 'Main Stream' or 'Sub Stream'\n\n"
                 "Clicking on 'Save Diagnostics File' will create a text file that includes some of the Settings of your camera.\n\n"
-                "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n")
+                "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n", title="Help")
 
 #   Bandwidth Calculation
         if event == '-BANDWIDTHCALCULATE-':
@@ -495,4 +564,5 @@ def main():
 
 #   Required for Multiprocessing to work on Windows Based OS
 if __name__ == '__main__':
+    multiprocessing.freeze_support()
     main()
