@@ -20,6 +20,7 @@ https://www.dropbox.com/s/1rbebdu6feqkbt7/CCTV%20Companion%20v0.1.exe?raw=1
 
 ## Current Features
 
+- Object Detection using a pre-trained tensorflow model. This can be toggled ON/OFF.
 - Outputting Serial No., Model Name and Firmware Version of Device
 - Opening a Live View (RTSP Stream) with the ability to control a PTZ Camera (Up, Down, Left, Right, Zoom In/Out, Focus, Wiper On/Off)
 - Copying a usable RTSP-Link to your Clipboard so it can easily be shared or pasted into other programs like VLC.
