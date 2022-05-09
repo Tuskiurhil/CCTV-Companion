@@ -35,8 +35,6 @@ configPath = "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
 weightsPath = "frozen_inference_graph.pb"
 
 #   Object Detection Accuracy Neuron Input
-SMDQUALITY = 0
-
 net = cv2.dnn_DetectionModel(weightsPath,configPath)
 net.setInputSize(320,320) # Accuracy of detection
 net.setInputScale(1.0/ 127.5)
@@ -155,6 +153,37 @@ def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
 
 #   Main function for RTSP stream. Will receive Arguments, construct them to a full address and then grab
 #   the stream with cv2.
+def openimage(imagepath, SMD):
+
+
+    imagetbo = "".join(imagepath)
+    image = cv2.imread(imagetbo)
+    #while (image.isOpened()):
+    if SMD == "1":
+        #success, img = image.read()
+        classIds, confs, bbox = net.detect(image, confThreshold=thresholdValue)
+    text_color_top = (255, 255, 255)
+    text_color_bot = (0, 0, 0)
+    cv2.namedWindow(str(imagetbo), cv2.WINDOW_NORMAL)
+    if SMD == "1":
+        if len(classIds) != 0:
+            for classId, confidence, box in zip(classIds.flatten(), confs.flatten(), bbox):
+                if classId == 1:
+                    cv2.rectangle(image, box, color=(0, 0, 255), thickness=2)
+                    cv2.putText(image, classNames[classId - 1].upper(), (box[0] + 10, box[1] + 30),
+                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+                    cv2.putText(image, str(round(confidence * 100, 2)), (box[0] + 200, box[1] + 30),
+                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
+                else:
+                    cv2.rectangle(image, box, color=(0, 255, 0), thickness=1)
+                    cv2.putText(image, classNames[classId - 1].upper(), (box[0] + 10, box[1] + 30),
+                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+                    cv2.putText(image, str(round(confidence * 100, 2)), (box[0] + 200, box[1] + 30),
+                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
+    cv2.imshow(str(imagetbo), image)
+    cv2.waitKey(0)
+
+
 def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD, WEBCAM):
     global detectedObjectResponse_isRunning
     if WEBCAM == "1":
@@ -242,7 +271,7 @@ def main():
             [sg.Text('IP Address'), sg.Input(key='-ADDRESSMAINT-')],
             [sg.Text('Username '), sg.Input(key='-USERNAMEMAINT-')],
             [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
-            [sg.Button('Check'), sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
+            [sg.Button('Check')], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
             [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
@@ -431,22 +460,6 @@ def main():
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
-
-            global SMDQUALITY
-
-            if values["-SMDQUALITY-"] == 1:
-                SMDQUALITY = 240
-            elif values["-SMDQUALITY-"] == 2:
-                SMDQUALITY = 320
-            elif values["-SMDQUALITY-"] == 3:
-                SMDQUALITY = 400
-            elif values["-SMDQUALITY-"] == 4:
-                SMDQUALITY = 520
-            elif values["-SMDQUALITY-"] == 5:
-                SMDQUALITY = 700
-            elif values["-SMDQUALITY-"] == 6:
-                SMDQUALITY = 1000
-
             if values["-SMD-"] == True:
                 SMD = "1"
             elif values["-SMD-"] == False:
@@ -455,6 +468,21 @@ def main():
                 CHANNELSELECT = '0'
             elif values["-CHANNEL1-"] == True:
                 CHANNELSELECT = '1'
+
+
+            streaminput = values['-ADDRESSMAINT-']
+            imagestream = streaminput.startswith('imgsrc=')
+            if imagestream == True:
+                pathtoimg = values['-ADDRESSMAINT-']
+                pathtoimgsplit = pathtoimg.split("=")
+                pathtoimgsplit.remove("imgsrc")
+                print(pathtoimgsplit)
+                imagepath = pathtoimgsplit
+                openimagestream = multiprocessing.Process(target=openimage, args=(imagepath,SMD))
+                print("Opening Image, please wait a moment...")
+                    #camstream.daemon = True
+                openimagestream.start()
+
             if values['-ADDRESSMAINT-'] == "webcam":
                 WEBCAM = "1"
                 camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
