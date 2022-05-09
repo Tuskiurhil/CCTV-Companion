@@ -43,6 +43,14 @@ with open(classFile,'rt') as f:
 configPath = "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
 weightsPath = "frozen_inference_graph.pb"
 
+#   Object Detection Accuracy Neuron Input
+net_low = 240
+net_med = 320
+net_high = 400
+net_veryhigh = 520
+net_ultrahigh = 700
+net_insane = 1000
+
 net = cv2.dnn_DetectionModel(weightsPath,configPath)
 net.setInputSize(340,340) # Accuracy of detection
 net.setInputScale(1.0/ 127.5)
@@ -65,6 +73,7 @@ CCTV_Theme = {'BACKGROUND': '#006d74',
 sg.theme_add_new('CCTV_Theme', CCTV_Theme)
 sg.theme('Darkgrey5')
 
+
 def splashscreen():
     #   Loading and Displaying a Splashscreen upon start of the Software. If none is found, pass.
     try:
@@ -72,11 +81,13 @@ def splashscreen():
         isExist = os.path.exists(splashscreen)
         if isExist == True:
             DISPLAY_TIME_MILLISECONDS = 600
-            sg.Window('Splashscreen', [[sg.Image(splashscreen)]], transparent_color=sg.theme_background_color(), no_titlebar=True, keep_on_top=True).read(timeout=DISPLAY_TIME_MILLISECONDS, close=True)
+            sg.Window('Splashscreen', [[sg.Image(splashscreen)]], transparent_color=sg.theme_background_color(),
+                      no_titlebar=True, keep_on_top=True).read(timeout=DISPLAY_TIME_MILLISECONDS, close=True)
         elif isExist == False:
             pass
     except:
         pass
+
 
 def ping(host):
     # Option for the number of packets as a function of
@@ -87,11 +98,13 @@ def ping(host):
 
     return subprocess.call(command) == 0
 
+
 def detectedObjectResponse():
     global detectedObjectResponse_isRunning
     print("Person detected!")
     time.sleep(8)
     detectedObjectResponse_isRunning = 0
+
 
 def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
     while True:
@@ -161,8 +174,9 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD, WEBCAM):
     if WEBCAM == "1":
         capture = cv2.VideoCapture(0)
     elif WEBCAM == "0":
-        capture = cv2.VideoCapture("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
-    SMD
+        capture = cv2.VideoCapture(
+            "rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT
+            )
 #   PTZ Control
     ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
     ptz_control.daemon = True
@@ -171,7 +185,7 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD, WEBCAM):
     while(capture.isOpened()):
         
         if SMD == "1":
-            success,img = capture.read()
+            success, img = capture.read()
             classIds, confs, bbox = net.detect(img,confThreshold=thresholdValue)
         ret, frame = capture.read()
 
@@ -185,18 +199,26 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD, WEBCAM):
                 for classId, confidence, box in zip(classIds.flatten(),confs.flatten(),bbox):
                     if classId == 1:
                         cv2.rectangle(frame, box, color=(0,0,255),thickness=2)
-                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
-                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),
+                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
+                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),
+                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
                     else: 
                         cv2.rectangle(frame, box, color=(0,255,0),thickness=1)
-                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
-                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),
+                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
+                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),
+                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
                     if classId == int(1) and detectedObjectResponse_isRunning == 0:
                         detection = threading.Thread(target=detectedObjectResponse)
                         detection.start()
                         detectedObjectResponse_isRunning = 1
-        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
-        cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
+        if WEBCAM == "1":
+            cv2.putText(frame, "CAM", (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
+            cv2.putText(frame, "CAM", (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
+        elif WEBCAM == "0":
+            cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
+            cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
         cv2.imshow(str(ADDRESS), frame)
         if cv2.waitKey(1) & 0xFF == ord('p'):
             break
@@ -234,7 +256,7 @@ def main():
             [sg.Text('IP Address'), sg.Input(key='-ADDRESSMAINT-')],
             [sg.Text('Username '), sg.Input(key='-USERNAMEMAINT-')],
             [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
-            [sg.Button('Check')],
+            [sg.Button('Check'), sg.Slider(range = (1, 5), orientation = vertical)],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
             [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
