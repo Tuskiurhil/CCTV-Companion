@@ -1,8 +1,4 @@
 #!/usr/bin/env python3
-from concurrent.futures import process
-#from distutils.cmd import Command
-from pickle import FALSE
-from traceback import print_list
 import PySimpleGUI as sg
 import cv2
 import webbrowser
@@ -11,14 +7,11 @@ import os
 import threading
 import multiprocessing
 import keyboard
-import sys
 import time
 import requests
 import platform
 import subprocess
 from requests.auth import HTTPDigestAuth
-#   importing project files
-#from cctvfunc import CCTV
 
 ADDRESS = ""
 USERNAME = ""
@@ -35,24 +28,17 @@ windowName = "Output"
 classNames = []
 classFile = "coco.names"
 with open(classFile,'rt') as f:
-    #classNames = f.read().rstrip('\n').split('\n')
     classNames = [line.rstrip() for line in f]
-    #classNames = [line.lstrip() for line in f]
 # print(classNames)
 
 configPath = "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
 weightsPath = "frozen_inference_graph.pb"
 
 #   Object Detection Accuracy Neuron Input
-net_low = 240
-net_med = 320
-net_high = 400
-net_veryhigh = 520
-net_ultrahigh = 700
-net_insane = 1000
+SMDQUALITY = 0
 
 net = cv2.dnn_DetectionModel(weightsPath,configPath)
-net.setInputSize(340,340) # Accuracy of detection
+net.setInputSize(320,320) # Accuracy of detection
 net.setInputScale(1.0/ 127.5)
 net.setInputMean((127.5, 127.5, 127.5))
 net.setInputSwapRB(True)
@@ -256,7 +242,7 @@ def main():
             [sg.Text('IP Address'), sg.Input(key='-ADDRESSMAINT-')],
             [sg.Text('Username '), sg.Input(key='-USERNAMEMAINT-')],
             [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
-            [sg.Button('Check'), sg.Slider(range = (1, 5), orientation = vertical)],
+            [sg.Button('Check'), sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
             [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
@@ -445,6 +431,22 @@ def main():
             ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
+
+            global SMDQUALITY
+
+            if values["-SMDQUALITY-"] == 1:
+                SMDQUALITY = 240
+            elif values["-SMDQUALITY-"] == 2:
+                SMDQUALITY = 320
+            elif values["-SMDQUALITY-"] == 3:
+                SMDQUALITY = 400
+            elif values["-SMDQUALITY-"] == 4:
+                SMDQUALITY = 520
+            elif values["-SMDQUALITY-"] == 5:
+                SMDQUALITY = 700
+            elif values["-SMDQUALITY-"] == 6:
+                SMDQUALITY = 1000
+
             if values["-SMD-"] == True:
                 SMD = "1"
             elif values["-SMD-"] == False:
@@ -464,7 +466,7 @@ def main():
                 if ping(ADDRESS) == True:
                     TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
                     if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                            [sg.Popup("You must fill out all fields.")] 
+                            [sg.Popup("You must fill out all fields.")]
                             window.close()
                             main()
                             #break
