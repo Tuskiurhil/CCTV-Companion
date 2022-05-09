@@ -20,6 +20,10 @@ https://www.dropbox.com/s/1rbebdu6feqkbt7/CCTV%20Companion%20v0.1.exe?raw=1
 
 ## Current Features
 
+- typing "webcam" in the IP-Address field will open the first recording device. (if SMD is checked, Object Detection will run on it)
+- typing "imgsrc=" followed by the path to an image will open the image (if SMD is checked, Object Detection will run on it)
+
+
 - Object Detection using a pre-trained tensorflow model. This can be toggled ON/OFF.
 - Outputting Serial No., Model Name and Firmware Version of Device
 - Opening a Live View (RTSP Stream) with the ability to control a PTZ Camera (Up, Down, Left, Right, Zoom In/Out, Focus, Wiper On/Off)
