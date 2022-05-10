@@ -35,7 +35,21 @@ if isFile == False:
         cctvc_settings.write("")
         cctvc_settings.close
         dropdown_selection = 0
-    pass
+        with open("cctvc_settings.txt", "r") as cctvc_settings:
+            avail_cams = []
+            avail_cams = cctvc_settings.read()
+            avail_cams = avail_cams.splitlines()
+            # avail_cams = cctvc_settings.read()
+            index_end = len(avail_cams)
+            # print info('cameras in list')
+            print(info(yellow(f'{index_end} cameras in list')))
+
+            if len(avail_cams) > 1:
+                dropdown_selection = 1
+            else:
+                dropdown_selection = 0
+
+            cctvc_settings.close()
 #       when file found > read settings > start
 elif isFile == True:
     with open("cctvc_settings.txt", "r") as cctvc_settings:
