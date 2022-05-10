@@ -7,10 +7,12 @@ import os
 import threading
 import multiprocessing
 import keyboard
+import json
 import time
 import requests
 import platform
 import subprocess
+from huepy import *
 from requests.auth import HTTPDigestAuth
 
 ADDRESS = ""
@@ -20,6 +22,37 @@ TARGETAPI = ""
 
 detectedObjectResponse_isRunning = 0
 
+# _________________________________________
+#   Read Config File if available
+
+settingsfile = "cctvc_settings.txt"
+isFile = os.path.isfile(settingsfile)
+#print(isFile)
+
+#   Checking if Settingsfile can be found.
+if isFile == False:
+    with open("cctvc_settings.txt", "w") as cctvc_settings:
+        cctvc_settings.write("")
+        cctvc_settings.close
+        dropdown_selection = 0
+    pass
+#       when file found > read settings > start
+elif isFile == True:
+    with open("cctvc_settings.txt", "r") as cctvc_settings:
+        avail_cams = []
+        avail_cams = cctvc_settings.read()
+        avail_cams = avail_cams.splitlines()
+        #avail_cams = cctvc_settings.read()
+        index_end = len(avail_cams)
+        #print info('cameras in list')
+        print(info(yellow(f'{index_end} cameras in list')))
+
+        if len(avail_cams) > 1:
+            dropdown_selection = 1
+        else:
+            dropdown_selection = 0
+
+        cctvc_settings.close()
 # _________________________________________
 #   Object Recognition Parameters
 thresholdValue = 0.57
@@ -59,7 +92,7 @@ sg.theme('Darkgrey5')
 
 
 def splashscreen():
-    #   Loading and Displaying a Splashscreen upon start of the Software. If none is found, pass.
+    """Displaying a splashscreen on startup if 'splashscreen.png' was found in main folder"""
     try:
         splashscreen = "splashscreen.png"
         isExist = os.path.exists(splashscreen)
@@ -74,23 +107,40 @@ def splashscreen():
 
 
 def ping(host):
-    # Option for the number of packets as a function of
+    """Checking if entered IP is valid and can be reached"""
     param = '-n' if platform.system().lower()=='windows' else '-c'
-
-    # Building the command. Ex: "ping -c 1 google.com"
     command = ['ping', param, '1', host]
-
     return subprocess.call(command) == 0
+
+def add_cam_to_settings(ADDRESS):
+    # adding camera to settings file
+    settingslines = []
+    with open("cctvc_settings.txt", "r+") as cctvc_settings:
+        listing = cctvc_settings.read()
+        if not listing:
+            cctvc_settings.write("\n" + ADDRESS)  # append missing data
+            cctvc_settings.close()
+        else:
+            if listing.find(ADDRESS) >= 0:
+                cctvc_settings.close()
+            else:
+                cctvc_settings.write("\n" + ADDRESS)  # append missing data
+                cctvc_settings.close()
 
 
 def detectedObjectResponse():
+    """Handling of object detection as a seperate function"""
     global detectedObjectResponse_isRunning
-    print("Person detected!")
+    print(info(yellow("I'm sending a webhook to GroupLotse!")))
+    webhook_url = "https://webhook.grouplotse.com:4433/inc/18997579?key=QJu7OB5FjoGk"
+    data = "I have detected a Person in the Image!"
+    requests.post(webhook_url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
     time.sleep(8)
     detectedObjectResponse_isRunning = 0
 
 
 def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
+    """Allows control of PTZ Cameras through Dahua API calls over HTTP Requests"""
     while True:
         event = keyboard.read_event()
         if event.event_type == keyboard.KEY_DOWN and event.name == 's':
@@ -143,24 +193,21 @@ def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
         if event.event_type == keyboard.KEY_DOWN and event.name == 'n':
             APIURL = "http://"+ADDRESS+"/cgi-bin/rainBrush.cgi?action=moveContinuously&interval=5"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print("Wiper ON")
+            print(good(green("Wiper ON")))
             
         if event.event_type == keyboard.KEY_DOWN and event.name == 'm':
             APIURL = "http://"+ADDRESS+"/cgi-bin/rainBrush.cgi?action=stopMove"
             response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print("Wiper OFF")
+            print(bad(red("Wiper OFF")))
 
 
-#   Main function for RTSP stream. Will receive Arguments, construct them to a full address and then grab
-#   the stream with cv2.
 def openimage(imagepath, SMD):
-
+    """Opens an Image and displays it for viewing. If the SMD Checkbox has been ticket, object recognition
+    will be employed"""
 
     imagetbo = "".join(imagepath)
     image = cv2.imread(imagetbo)
-    #while (image.isOpened()):
     if SMD == "1":
-        #success, img = image.read()
         classIds, confs, bbox = net.detect(image, confThreshold=thresholdValue)
     text_color_top = (255, 255, 255)
     text_color_bot = (0, 0, 0)
@@ -266,16 +313,16 @@ def main():
     splashscreen()
 
 #   Tab Layout Definition for each window
-
-    tab0_layout = [[sg.Text('Camera Maintenance')],      
-            [sg.Text('IP Address'), sg.Input(key='-ADDRESSMAINT-')],
-            [sg.Text('Username '), sg.Input(key='-USERNAMEMAINT-')],
-            [sg.Text('Password '), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
+    tab0_layout = [[sg.Text('Camera Maintenance')],
+            [sg.Text('IP Address'), sg.Push(), sg.Input(key='-ADDRESSMAINT-')],
+            [sg.Text('Available Cameras'), sg.Combo(values=tuple(avail_cams), key='-DROPADDRESS-', size=(14,1)), sg.Button('Delete List')],
+            [sg.Text('Username '), sg.Push(), sg.Input(key='-USERNAMEMAINT-')],
+            [sg.Text('Password '), sg.Push(), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
             [sg.Button('Check')], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
             [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
-            [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')], 
+            [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
             [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
             [sg.Button('Exit', key='-EXIT0-'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="red")]]
         
@@ -311,12 +358,12 @@ def main():
 
 #   Tab Group Layout (must contain ONLY tabs)
     tab_group_layout = [[sg.Tab('Camera Maintenance', tab0_layout, key='-TAB0-'),
-                        #sg.Tab('RTSP Stream', tab1_layout, key='-TAB1-'),
-                        sg.Tab('Capacity Calculation', tab2_layout, key='-TAB2-'),
-                        #sg.Tab('IP Calculation', tab3_layout, key='-TAB3-'),
-                        #sg.Tab('Lens Calculation', tab4_layout, key='-TAB4-'),
-                        sg.Tab('About', tab6_layout, key='-TAB6-'),
-                        ]]
+                            #sg.Tab('RTSP Stream', tab1_layout, key='-TAB1-'),
+                            sg.Tab('Capacity Calculation', tab2_layout, key='-TAB2-'),
+                            #sg.Tab('IP Calculation', tab3_layout, key='-TAB3-'),
+                            #sg.Tab('Lens Calculation', tab4_layout, key='-TAB4-'),
+                            sg.Tab('About', tab6_layout, key='-TAB6-'),
+                            ]]
 
 #   The window layout - defines the entire window
     layout = [[sg.TabGroup(tab_group_layout,
@@ -333,16 +380,21 @@ def main():
 #   Camera Maintenance
     #   Diagnostics
         if event == 'Save Diagnostics File' and sg.popup_yes_no('This will gather a lot of Data about the Device and store it in a Text File.\nThis might take a few seconds.\n\nStart the Diagnostics?') == 'Yes':
-            ADDRESS = values['-ADDRESSMAINT-']
+            ADDRESS = ""
+            if len(values['-DROPADDRESS-']) > 0:
+                ADDRESS = values['-DROPADDRESS-']
+            elif values['-DROPADDRESS-'] == "":
+                ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
+            add_cam_to_settings(ADDRESS)
             diagnosticslist = [
                 "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getHardwareVersion", "/cgi-bin/magicBox.cgi?action=getSerialNo", "/cgi-bin/magicBox.cgi?action=getMachineName",
                 "/cgi-bin/magicBox.cgi?action=getSystemInfo", "/cgi-bin/magicBox.cgi?action=getVendor", "/cgi-bin/magicBox.cgi?action=getSoftwareVersion", "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=Onvif",
                 "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=CGI", "/cgi-bin/magicBox.cgi?action=getDeviceClass", "/cgi-bin/userManager.cgi?action=getUserInfoAll"
                 ]
             progresstarget = 0
-            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+            if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
                 [sg.Popup("You must fill out all fields.")] 
                 window.close()
                 main()
@@ -366,14 +418,22 @@ def main():
 #   Camera Maintenance
     #   --HTTP-AUth DigestConnection Check--
         if event == 'Check':
-            ADDRESS = values['-ADDRESSMAINT-']
+            ADDRESS = ""
+            if len(values['-DROPADDRESS-']) > 0:
+                ADDRESS = values['-DROPADDRESS-']
+            elif values['-DROPADDRESS-'] == "":
+                ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
+            # adding camera to settings file
+            add_cam_to_settings(ADDRESS)
+            print(ADDRESS)
+
             TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
             diagnosticslist = [
                 "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getSerialNo", "/cgi-bin/magicBox.cgi?action=getSoftwareVersion",
                 ]
-            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+            if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
                 [sg.Popup("You must fill out all fields.")] 
                 window.close()
                 main()
@@ -399,13 +459,28 @@ def main():
                 window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
 
 #   Camera Maintenance
+    #   Diagnostics
+        if event == 'Delete List':
+            if os.path.exists("cctvc_settings.txt"):
+                os.remove("cctvc_settings.txt")
+                [sg.PopupOK('Camera history deleted...')]
+            else:
+                pass
+
+            #   Camera Maintenance
     #   Rebooting the Camera
         if event == 'Reboot' and sg.popup_yes_no('This will restart your device, are you sure?') == 'Yes':
-            ADDRESS = values['-ADDRESSMAINT-']
+            ADDRESS = ""
+            if len(values['-DROPADDRESS-']) > 0:
+                ADDRESS = values['-DROPADDRESS-']
+            elif values['-DROPADDRESS-'] == "":
+                ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
+            # adding camera to settings file
+            add_cam_to_settings(ADDRESS)
             TARGETAPI = "/cgi-bin/magicBox.cgi?action=reboot"
-            if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+            if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
                 [sg.Popup("You must fill out all fields.")] 
                 window.close()
                 main()
@@ -422,7 +497,11 @@ def main():
 #   Camera Maintenance
     #   Will call a snapshot and display it as a .jpg in the standard browser
         if event == 'Snapshot':
-            ADDRESS = values['-ADDRESSMAINT-']
+            ADDRESS = ""
+            if len(values['-DROPADDRESS-']) > 0:
+                ADDRESS = values['-DROPADDRESS-']
+            elif values['-DROPADDRESS-'] == "":
+                ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             TARGETAPI = "/cgi-bin/snapshot.cgi"
@@ -436,16 +515,23 @@ def main():
         if event == 'Factory Reset' and sg.popup_yes_no("This will factory reset your device, are you sure?\nAll settings will be returned to their default value!") == "Yes":
             if sg.popup_yes_no("This change cannot be reverted!", text_color="red", font="bold") == "Yes":
                 sg.popup_timed("Factory Resetting...")
-                ADDRESS = values['-ADDRESSMAINT-']
+                ADDRESS = ""
+                if len(values['-DROPADDRESS-']) > 0:
+                    ADDRESS = values['-DROPADDRESS-']
+                elif values['-DROPADDRESS-'] == "":
+                    ADDRESS = values['-ADDRESSMAINT-']
                 USERNAME = values['-USERNAMEMAINT-']
                 PASSWORD = values['-PASSWORDMAINT-']
+                # adding camera to settings file
+                add_cam_to_settings(ADDRESS)
+
                 TARGETAPI = "/cgi-bin/magicBox.cgi?action=resetSystemEx&type=0"
-                if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
                     [sg.Popup("You must fill out all fields.")] 
                     window.close()
                     main()
                     #break
-                if len(values['-ADDRESSMAINT-']) != 0 or len(values['-USERNAMEMAINT-']) != 0 or len(values['-PASSWORDMAINT-']) != 0:
+                if len(values['-USERNAMEMAINT-']) != 0 or len(values['-PASSWORDMAINT-']) != 0:
                     APIURL = ("http://"+ADDRESS+TARGETAPI)
                     response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
                     print("response code:\n" +str(response.status_code))
@@ -457,7 +543,11 @@ def main():
 
 #   RTSP Stream
         if event == 'Live View':
-            ADDRESS = values['-ADDRESSMAINT-']
+            ADDRESS = ""
+            if len(values['-DROPADDRESS-']) > 0:
+                ADDRESS = values['-DROPADDRESS-']
+            elif values['-DROPADDRESS-'] == "":
+                ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             if values["-SMD-"] == True:
@@ -491,29 +581,33 @@ def main():
                 camstream.start()
             else:
                 WEBCAM = "0"
-                if ping(ADDRESS) == True:
-                    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-                    if len(values['-ADDRESSMAINT-']) == 0 or len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                            [sg.Popup("You must fill out all fields.")]
-                            window.close()
-                            main()
-                            #break
-                    APIURL = ("http://"+ADDRESS+TARGETAPI)
-                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-                    response.encoding = 'utf-8-sig'
-                    print("response code:\n"+str(response.status_code))
-                    if response.status_code == 200:
-                        camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
-                        print("Opening RTSP Stream, please wait a moment...")
-                        #camstream.daemon = True
-                        camstream.start()
-                    if response.status_code == 401:
-                        window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
-                if ping(ADDRESS) == False:
-                    window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
+            if ping(ADDRESS) == True:
+                TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+                if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                        [sg.Popup("You must fill out all fields.")]
+                        window.close()
+                        main()
+                        #break
+                APIURL = ("http://"+ADDRESS+TARGETAPI)
+                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+                response.encoding = 'utf-8-sig'
+                print("response code:\n"+str(response.status_code))
+                if response.status_code == 200:
+                    camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
+                    print("Opening RTSP Stream, please wait a moment...")
+                    #camstream.daemon = True
+                    camstream.start()
+                if response.status_code == 401:
+                    window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+            if ping(ADDRESS) == False:
+                window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
 
         if event == 'Copy RTSP Link':
-            ADDRESS = values['-ADDRESSMAINT-']
+            ADDRESS = ""
+            if len(values['-DROPADDRESS-']) > 0:
+                ADDRESS = values['-DROPADDRESS-']
+            elif values['-DROPADDRESS-'] == "":
+                ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
             if values["-CHANNEL0-"] == True:
@@ -525,7 +619,11 @@ def main():
             sg.popup_no_wait('Link copied to clipboard')
 
         if event == 'Web Interface':
-            ADDRESS = values['-ADDRESSMAINT-']
+            ADDRESS = ""
+            if len(values['-DROPADDRESS-']) > 0:
+                ADDRESS = values['-DROPADDRESS-']
+            elif values['-DROPADDRESS-'] == "":
+                ADDRESS = values['-ADDRESSMAINT-']
             webbrowser.open(ADDRESS)
 
         if event == '-MAINTHELP-':
