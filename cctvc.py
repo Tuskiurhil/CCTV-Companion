@@ -58,6 +58,7 @@ elif isFile == True:
         avail_cams = avail_cams.splitlines()
         #avail_cams = cctvc_settings.read()
         index_end = len(avail_cams)
+
         #print info('cameras in list')
         print(info(yellow(f'{index_end} cameras in list')))
 
@@ -133,11 +134,14 @@ def add_cam_to_settings(ADDRESS):
         listing = cctvc_settings.read()
         if not listing:
             cctvc_settings.write("\n" + ADDRESS)  # append missing data
+            print(good(green(f'Saved {ADDRESS} to list')))
             cctvc_settings.close()
         else:
             if listing.find(ADDRESS) >= 0:
+                print(bad(red(f'{ADDRESS} already in list, not saved')))
                 cctvc_settings.close()
             else:
+                print(good(green(f'Saved {ADDRESS} to list')))
                 cctvc_settings.write("\n" + ADDRESS)  # append missing data
                 cctvc_settings.close()
 
