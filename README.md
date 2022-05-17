@@ -49,7 +49,7 @@ Windows .exe File: (05. May 2022, 10:16 AM) **OUTDATED**
 
 https://www.dropbox.com/s/1rbebdu6feqkbt7/CCTV%20Companion%20v0.1.exe?raw=1
 
-## Setup and Usage
+## Setup
 
 The application works on Windows and Unix/MacOS.
 
