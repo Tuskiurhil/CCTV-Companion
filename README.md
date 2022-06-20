@@ -41,7 +41,8 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 - Grabbing a Snapshot and displaying it
 - Saving a Diagnostics File (grabs some of the more important settings and infos on the device and saves them in a .txt)
 - Factory Resetting a device and switching all settings to default value
-- Capacity Calculation (Counting # of cameras using specified codec and calculating expected bandwidth. Data gathered from Dahua Techs. Security Calculator)
+- Capacity Calculation (Counting # of cameras using specified codec and calculating expected bandwidth.
+- Recording Time (Calculating estimated recording time based on # of cameras, Bit Rate and specified Hard Drive Space in TeraByte.
 
 ## Windows Executable
 
