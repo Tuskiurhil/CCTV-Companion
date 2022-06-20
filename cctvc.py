@@ -148,13 +148,13 @@ def add_cam_to_settings(ADDRESS):
 
 def detectedObjectResponse():
     """Handling of object detection as a seperate function"""
-    global detectedObjectResponse_isRunning
-    print(info(yellow("I'm sending a webhook to GroupLotse!")))
-    webhook_url = "https://webhook.grouplotse.com:4433/inc/18997579?key=QJu7OB5FjoGk"
-    data = "I have detected a Person in the Image!"
-    requests.post(webhook_url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
-    time.sleep(8)
-    detectedObjectResponse_isRunning = 0
+    #global detectedObjectResponse_isRunning
+    #print(info(yellow("I'm sending a webhook to GroupLotse!")))
+    #webhook_url = "https://webhook.grouplotse.com:4433/inc/18997579?key=QJu7OB5FjoGk"
+    #data = "I have detected a Person in the Image!"
+    #requests.post(webhook_url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
+    #time.sleep(8)
+    #detectedObjectResponse_isRunning = 0
 
 
 def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
@@ -350,8 +350,10 @@ def main():
     #         [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],
     #         [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
     #         [sg.Button('Open'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface'), sg.Button('Exit', key='-EXIT1-'), sg.Button('Help')]]
-            
-    tab2_layout =   [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
+
+
+
+    bandwidth_layout =   [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
                     [sg.Text('Resolution'), sg.Text('# of Cameras'), sg.Text('Codec')],
                     [sg.Text('1 Megapixel  '), sg.Input('', key='-#1MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL1', default=True, key='#1MPh265'), sg.Radio('H.264', 'CODECSEL1', key='#1MPh264')], #sg.Radio('MJPEG', 'CODECSEL1', key='#1MPMJPEG')],
                     [sg.Text('2 Megapixel  '), sg.Input('', key='-#2MP-', size=(4, 1)), sg.Radio('H.265', 'CODECSEL2', default=True, key='#2MPh265'), sg.Radio('H.264', 'CODECSEL2', key='#2MPh264')], #sg.Radio('MJPEG', 'CODECSEL2', key='#2MPMJPEG')],
@@ -365,12 +367,25 @@ def main():
                     [sg.Text('Approximate Bandwidth Usage: '), sg.InputText("", key="-BandwidthResultTextKB-", readonly=True, size=(8,1), text_color="black"), sg.Text("Kilobit per second - (Kbps)")],
                     [sg.Text('Approximate Bandwidth Usage: '), sg.InputText("", key="-BandwidthResultTextMB-", readonly=True, size=(8,1), text_color="black"), sg.Text("Megabit per second - (Mbps)")]]
 
+    record_time_layout = [[sg.Text('Recording Time Calculation')],
+                          [sg.Text('Bit Rate        '), sg.Input('', key='-RECTIMEBITRATE-', size=(6, 1)), sg.Text('Kbps'), sg.Push()],
+                          [sg.Text('# of Cameras '), sg.Input('', key='-RECTIMECAMERAS-', size=(6, 1)), sg.Push()],
+                          [sg.Text('Disk Capacity'), sg.Input('', key='-RECTIMETB-', size=(6, 1)), sg.Text('TB'), sg.Push()],
+                          [sg.Text('Record Time:'),sg.InputText("", key="-RECTIMERESULT-", readonly=True, size=(20, 1), text_color="black")],
+                          [sg.Text('Calculation result is for reference only.')],
+                          [sg.Button('Calculate', key='-RECTIMECALCULATE-')]]
+
+
+    tab_group_layout_bandwidth = sg.TabGroup([[sg.Tab('Bandwidth', bandwidth_layout), sg.Tab('Record Time', record_time_layout)]])
+
+    tab2_layout = [[tab_group_layout_bandwidth]]
+
     tab3_layout = [[sg.Text('IP Calculation')]]
 
     tab4_layout = [[sg.Text('Lens Calculation')]]
 
     tab6_layout = [[sg.Text('CCTV Companion\n\n'
-                            'Version 0.1\n\n\n\n\n')],
+                            'Version 0.2\n\n\n\n\n')],
                     #[sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
                     [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n")]]
 
@@ -595,30 +610,31 @@ def main():
                 WEBCAM = "1"
                 camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
                 print("Opening Webcam Stream, please wait a moment...")
+                window['-MAINTOUTPUT-'].update(str("Opening Webcam Stream, please wait a moment..."))
                     #camstream.daemon = True
                 camstream.start()
             else:
                 WEBCAM = "0"
-            if ping(ADDRESS) == True:
-                TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-                if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                        [sg.Popup("You must fill out all fields.")]
-                        window.close()
-                        main()
-                        #break
-                APIURL = ("http://"+ADDRESS+TARGETAPI)
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-                response.encoding = 'utf-8-sig'
-                print("response code:\n"+str(response.status_code))
-                if response.status_code == 200:
-                    camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
-                    print("Opening RTSP Stream, please wait a moment...")
-                    #camstream.daemon = True
-                    camstream.start()
-                if response.status_code == 401:
-                    window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
-            if ping(ADDRESS) == False:
-                window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
+                if ping(ADDRESS) == True:
+                    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+                    if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
+                            [sg.Popup("You must fill out all fields.")]
+                            window.close()
+                            main()
+                            #break
+                    APIURL = ("http://"+ADDRESS+TARGETAPI)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+                    response.encoding = 'utf-8-sig'
+                    print("response code:\n"+str(response.status_code))
+                    if response.status_code == 200:
+                        camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
+                        print("Opening RTSP Stream, please wait a moment...")
+                        #camstream.daemon = True
+                        camstream.start()
+                    if response.status_code == 401:
+                        window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+                if ping(ADDRESS) == False:
+                    window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
 
         if event == 'Copy RTSP Link':
             ADDRESS = ""
@@ -723,7 +739,19 @@ def main():
                 window['-BandwidthResultTextKB-'].update(bandwidthresultKB)
                 bandwidthresultMB = ((MP1 + MP2 + MP4 + MP5 + MP6 + MP8 + MP12) / 1000)
                 window['-BandwidthResultTextMB-'].update(bandwidthresultMB)
-                    
+
+        if event == '-RECTIMECALCULATE-':
+            rectime_cambitrate = int(values['-RECTIMEBITRATE-']) * int(values['-RECTIMECAMERAS-'])
+            terabyte_in_kbits = int(values['-RECTIMETB-']) * float(8796093022.208)
+            rectime_in_seconds = terabyte_in_kbits / rectime_cambitrate
+            rectime_in_hours = rectime_in_seconds / int(3600)
+            rectime_in_days = rectime_in_hours * float(0.0416666667)
+            print(rectime_in_days)
+            rectime_prelim = str(rectime_in_days).split(".")
+            rectimehours = (f'0.{rectime_prelim[1]}')
+            rectimehoursfloat = float(rectimehours) * 24
+
+            window['-RECTIMERESULT-'].update(f'{rectime_prelim[0]} Days, {rectimehoursfloat:.2f} Hours')
 
         if event == sg.WIN_CLOSED or event == '-EXIT0-' or event == '-EXIT1-' or event == '-EXIT2-' or event == '-EXIT3-' or event == '-EXIT4-' or event == '-EXIT5-' or event == '-EXIT6-':
             break
