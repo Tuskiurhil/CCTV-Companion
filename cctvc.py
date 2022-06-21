@@ -249,13 +249,13 @@ def openimage(imagepath, SMD):
     cv2.waitKey(0)
 
 
-def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, SMD, WEBCAM):
+def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, SMD, WEBCAM):
     global detectedObjectResponse_isRunning
     if WEBCAM == "1":
         capture = cv2.VideoCapture(0)
     elif WEBCAM == "0":
         capture = cv2.VideoCapture(
-            "rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT
+            "rtsp://" + USERNAME +":" + PASSWORD +"@" + ADDRESS +'/cam/realmonitor?channel=' + CHANNELSELECT + '&subtype=' + STREAMSELECT
             )
 #   PTZ Control
     ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
@@ -332,13 +332,13 @@ def main():
 
 #   Tab Layout Definition for each window
     tab0_layout = [[sg.Text('Camera Maintenance')],
-            [sg.Text('IP Address'), sg.Push(), sg.Input(key='-ADDRESSMAINT-')],
-            [sg.Text('Available Cameras'), sg.Combo(values=tuple(avail_cams), key='-DROPADDRESS-', size=(14,1)), sg.Button('Delete List')],
-            [sg.Text('Username '), sg.Push(), sg.Input(key='-USERNAMEMAINT-')],
-            [sg.Text('Password '), sg.Push(), sg.Input(password_char = "•", key='-PASSWORDMAINT-')],
-            [sg.Button('Check')], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
+            [sg.Text('IP Address'), sg.Push(), sg.Input(key='-ADDRESSMAINT-', size=(15, 1)), sg.Push()],
+            [sg.Text('Available Cameras'), sg.Push(), sg.Combo(values=tuple(avail_cams), key='-DROPADDRESS-', size=(15,1)), sg.Push(), sg.Button('Delete List')],
+            [sg.Text('Username '), sg.Push(), sg.Input(key='-USERNAMEMAINT-', size=(15, 1)), sg.Push()],
+            [sg.Text('Password '), sg.Push(), sg.Input(password_char = "•", key='-PASSWORDMAINT-', size=(15, 1)), sg.Push()],
+            [sg.Button('Check'), sg.Push(), sg.Text('Select Channel'), sg.Input('1', key='-CHANNELSELECT-', size=(4, 1)), sg.Push()], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
-            [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
+            [sg.Radio('Main Stream', 'STREAM', default=True, key='-STREAM0-'), sg.Radio('Sub Stream', 'STREAM', key='-STREAM1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
             [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
             [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
@@ -385,7 +385,7 @@ def main():
     tab4_layout = [[sg.Text('Lens Calculation')]]
 
     tab6_layout = [[sg.Text('CCTV Companion\n\n'
-                            'Version 0.2\n\n\n\n\n')],
+                            'Version 0.2.1\n\n\n\n\n')],
                     #[sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
                     [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n")]]
 
@@ -577,6 +577,10 @@ def main():
 #   RTSP Stream
         if event == 'Live View':
             ADDRESS = ""
+            if len(values['-CHANNELSELECT-']) > 0:
+                CHANNELSELECT = values['-CHANNELSELECT-']
+            if len(values['-CHANNELSELECT-']) == 0:
+                CHANNELSELECT = 0
             if len(values['-DROPADDRESS-']) > 0:
                 ADDRESS = values['-DROPADDRESS-']
             elif values['-DROPADDRESS-'] == "":
@@ -587,10 +591,10 @@ def main():
                 SMD = "1"
             elif values["-SMD-"] == False:
                 SMD = "0"
-            if values["-CHANNEL0-"] == True:
-                CHANNELSELECT = '0'
-            elif values["-CHANNEL1-"] == True:
-                CHANNELSELECT = '1'
+            if values["-STREAM0-"] == True:
+                STREAMSELECT = '0'
+            elif values["-STREAM1-"] == True:
+                STREAMSELECT = '1'
 
 
             streaminput = values['-ADDRESSMAINT-']
@@ -608,7 +612,7 @@ def main():
 
             if values['-ADDRESSMAINT-'] == "webcam":
                 WEBCAM = "1"
-                camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
+                camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD, CHANNELSELECT, STREAMSELECT,SMD,WEBCAM))
                 print("Opening Webcam Stream, please wait a moment...")
                 window['-MAINTOUTPUT-'].update(str("Opening Webcam Stream, please wait a moment..."))
                     #camstream.daemon = True
@@ -627,7 +631,7 @@ def main():
                     response.encoding = 'utf-8-sig'
                     print("response code:\n"+str(response.status_code))
                     if response.status_code == 200:
-                        camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD,CHANNELSELECT,SMD,WEBCAM))
+                        camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD, CHANNELSELECT, STREAMSELECT,SMD,WEBCAM))
                         print("Opening RTSP Stream, please wait a moment...")
                         #camstream.daemon = True
                         camstream.start()
@@ -638,18 +642,22 @@ def main():
 
         if event == 'Copy RTSP Link':
             ADDRESS = ""
+            if len(values['-CHANNELSELECT-']) > 0:
+                CHANNELSELECT = values['-CHANNELSELECT-']
+            if len(values['-CHANNELSELECT-']) == 0:
+                CHANNELSELECT = 0
             if len(values['-DROPADDRESS-']) > 0:
                 ADDRESS = values['-DROPADDRESS-']
             elif values['-DROPADDRESS-'] == "":
                 ADDRESS = values['-ADDRESSMAINT-']
             USERNAME = values['-USERNAMEMAINT-']
             PASSWORD = values['-PASSWORDMAINT-']
-            if values["-CHANNEL0-"] == True:
-                CHANNELSELECT = '0'
-            elif values["-CHANNEL1-"] == True:
-                CHANNELSELECT = '1'
-            pyperclip.copy("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
-            #full_link_copy = ("rtsp://"+USERNAME+":"+"**********"+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+CHANNELSELECT)
+            if values["-STREAM0-"] == True:
+                STREAMSELECT = '0'
+            elif values["-STREAM1-"] == True:
+                STREAMSELECT = '1'
+            pyperclip.copy("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel='+ CHANNELSELECT +'&subtype='+STREAMSELECT)
+            #full_link_copy = ("rtsp://"+USERNAME+":"+"**********"+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+STREAMSELECT)
             sg.popup_no_wait('Link copied to clipboard')
 
         if event == 'Web Interface':
@@ -665,6 +673,7 @@ def main():
                 'Camera Maintenance\n\n'
                 'Use this Window to do maintenance on your cameras using the Dahua API\n\n'
                 "Enter the IP-Address, Username and Password of your chosen device and click 'Check' to see Device Information\n\n"
+                "Use the 'Select Channel' Field to specify the Channel you want to see.\n\n"
                 "Live View allows you to see the live-stream of your Camera.\n\n"
                 "~PTZ-Controls:~\n"
                 "W,A,S,D    -   Moving Up, Left, Down, Right\n"
