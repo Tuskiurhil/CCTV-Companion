@@ -35,6 +35,9 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 - Object Detection using a pre-trained tensorflow model. This can be toggled ON/OFF.
 - Outputting Serial No., Model Name and Firmware Version of Device
 - Opening a Live View (RTSP Stream) with the ability to control a PTZ Camera (Up, Down, Left, Right, Zoom In/Out, Focus, Wiper On/Off)
+   - Ability to select both channel and stream.
+   - Selecting Channel 0 on a DVR/XVR will open all streams as a single window.
+   - Selecting the Max Channel + 1 on a NVR will open all streams as a single window. (Example: Select Channel 5 on a 4-Channel NVR)
 - Copying a usable RTSP-Link to your Clipboard so it can easily be shared or pasted into other programs like VLC.
 - Opening the Web Interface of specified device
 - Rebooting Device
