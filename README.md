@@ -51,7 +51,7 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 
 Windows .exe File:
 
-[CCTVC 0.2.zip](https://www.dropbox.com/s/u3d9gtsm53dhoxw/CCTVC%200.2.zip?raw=1)
+[CCTVC 0.2.1.zip](https://www.dropbox.com/s/wpotkf6xs5ni7oy/CCTVC%200.2.1.zip?raw=1)
 
 ## Setup
 
