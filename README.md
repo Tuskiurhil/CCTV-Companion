@@ -60,6 +60,7 @@ The application works on Windows and Unix/MacOS.
 
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
+The windows build comes with a dedicated executable. There is no need to download the .py files, just download the .zip archive from the link above.
 
 [Download the Github Repository](https://github.com/ColditzColligula/CCTV-Companion/archive/refs/heads/main.zip) and open the "cctvc.py" file with Python3.
 If you're **not** using the Windows .exe file, make sure to install the required libraries.
@@ -75,7 +76,9 @@ Required:
 - PySimpleGUI==4.60.0
 - requests==2.27.1
 
-If you've downloaded the Windows executable from the link above, just extract the archive, navigate into the folder "CCTVC 0.2" and run "cctvc.exe" by double-clicking on it.
+-OR-
+
+If you've downloaded the Windows executable from the link above, just extract the archive, navigate into the folder "CCTVC 0.2.1" and run "cctvc.exe" by double-clicking on it.
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black) / ![Mac OS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
 
