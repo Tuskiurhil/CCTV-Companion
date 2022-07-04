@@ -23,6 +23,8 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 
 ![grafik](https://user-images.githubusercontent.com/79027579/168796062-2162dbff-3abe-4c61-86d7-575506e1a7b2.png)
 
+![grafik](https://user-images.githubusercontent.com/79027579/177124403-006b4878-03f1-4142-9c3c-3ca8559cd334.png)
+
 
 ![grafik](https://user-images.githubusercontent.com/79027579/168796521-80777135-f4de-44cd-ba17-79065720aeed.png)
 
