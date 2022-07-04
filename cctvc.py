@@ -20,6 +20,10 @@ USERNAME = ""
 PASSWORD = ""
 TARGETAPI = ""
 
+STREAMPAUSE = False
+
+
+
 detectedObjectResponse_isRunning = 0
 
 # _________________________________________
@@ -119,6 +123,33 @@ def splashscreen():
             pass
     except:
         pass
+
+
+def availablerecorderchannels(ADDRESS,USERNAME,PASSWORD,):
+    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
+    APIURL = ("http://" + ADDRESS + TARGETAPI)
+    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+    response.encoding = 'utf-8-sig'
+    print("response code:\n" + str(response.status_code))
+    if response.status_code == 200:
+        recordertype = (response.text)
+        print(good(green(recordertype)))
+        if "XVR" in recordertype:
+            channels = "0"
+            print("Starting Videowall for Digital Video Recorder on all Channels")
+            return channels
+        if "NVR" in recordertype:
+            recordername = recordertype.split("type=DHI-NVR")
+            recorderchannels = recordername[1]
+            totalrecorderchannels = recorderchannels[2:4]
+            print(recordername[1])
+            print(f'Channels available: {totalrecorderchannels}')
+            videowallchannel = int(totalrecorderchannels) + 1
+            print(f'Selecting Videowall-Channel {videowallchannel}')
+            channels = str(videowallchannel)
+            return channels
+    if response.status_code == 401:
+        print("Authentication Unsuccesful\n-Wrong Username or Password-")
 
 
 def ping(host):
@@ -254,16 +285,16 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, S
     if WEBCAM == "1":
         capture = cv2.VideoCapture(0)
     elif WEBCAM == "0":
-        capture = cv2.VideoCapture(
+        capture = cv2.VideoCapture(str(
             "rtsp://" + USERNAME +":" + PASSWORD +"@" + ADDRESS +'/cam/realmonitor?channel=' + CHANNELSELECT + '&subtype=' + STREAMSELECT
-            )
+            ))
 #   PTZ Control
     ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
     ptz_control.daemon = True
     ptz_control.start()
 
     while(capture.isOpened()):
-        
+
         if SMD == "1":
             success, img = capture.read()
             classIds, confs, bbox = net.detect(img,confThreshold=thresholdValue)
@@ -283,7 +314,7 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, S
                                     cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
                         cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),
                                     cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
-                    else: 
+                    else:
                         cv2.rectangle(frame, box, color=(0,255,0),thickness=1)
                         cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),
                                     cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
@@ -303,7 +334,7 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, S
         if cv2.waitKey(1) & 0xFF == ord('p'):
             break
 
-#   Taking a Snapshot of the live stream        
+#   Taking a Snapshot of the live stream
         if cv2.waitKey(1) & 0xFF == ord('b'):
             stream_screenshot = capture.read()[1]
             cv2.imwrite("screenshot"+".png", stream_screenshot)
@@ -316,9 +347,31 @@ def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, S
     WEBCAM = "0"
 
 
+def webhook_post(webhook_addr, webhook_key, webhook_msg):
+    """Main function to send Text via Webhook.
+    webhook_addr is the URL of your Webhook. webhook_key is the Key.
+    Pass a String to webhook_msg and call the method."""
+    webhook_lotse = webhook_addr + "?key=" + webhook_key
+
+    try:
+        requests.post(
+            webhook_lotse,
+            data=json.dumps(webhook_msg),
+            headers={"Content-Type": "application/json"},
+        )
+        print('OK')
+    except:
+        raise Exception(
+            "ERR!"
+        )
+
 
 def webbrowserapiwindow(ADDRESS, USERNAME, PASSWORD, TARGETAPI):
     webbrowser.open("http://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+TARGETAPI)
+
+
+def openpageinbrowser(WEBURL):
+    webbrowser.open(WEBURL)
 
 def main():
     MP1 = int()
@@ -338,7 +391,7 @@ def main():
             [sg.Text('Password '), sg.Push(), sg.Input(password_char = "•", key='-PASSWORDMAINT-', size=(15, 1)), sg.Push()],
             [sg.Button('Check'), sg.Push(), sg.Text('Select Channel'), sg.Input('1', key='-CHANNELSELECT-', size=(4, 1)), sg.Push()], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
             #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
-            [sg.Radio('Main Stream', 'STREAM', default=True, key='-STREAM0-'), sg.Radio('Sub Stream', 'STREAM', key='-STREAM1-'), sg.Checkbox('SMD', default=False, key="-SMD-")],
+            [sg.Radio('Main Stream', 'STREAM', default=True, key='-STREAM0-'), sg.Radio('Sub Stream', 'STREAM', key='-STREAM1-'), sg.Checkbox('Object Detection', default=False, key="-SMD-"), sg.Checkbox('Videowall', default=False, key="-VIDWALL-")],
             [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
             [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
             [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
@@ -385,9 +438,10 @@ def main():
     tab4_layout = [[sg.Text('Lens Calculation')]]
 
     tab6_layout = [[sg.Text('CCTV Companion\n\n'
-                            'Version 0.2.1\n\n\n\n\n')],
+                            'Version 0.2.2\n\n\n\n\n')],
                     #[sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
-                    [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n")]]
+                    [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n")],
+                   [sg.Button("Website", key="-PROJECTWEBSITE-"), sg.Button("Report a Bug", key="-BUGREPORT-"), sg.Button("Request a Feature", key="-FEATUREREQUEST-")]]
 
 #   Tab Group Layout (must contain ONLY tabs)
     tab_group_layout = [[sg.Tab('Camera Maintenance', tab0_layout, key='-TAB0-'),
@@ -577,10 +631,6 @@ def main():
 #   RTSP Stream
         if event == 'Live View':
             ADDRESS = ""
-            if len(values['-CHANNELSELECT-']) > 0:
-                CHANNELSELECT = values['-CHANNELSELECT-']
-            if len(values['-CHANNELSELECT-']) == 0:
-                CHANNELSELECT = 0
             if len(values['-DROPADDRESS-']) > 0:
                 ADDRESS = values['-DROPADDRESS-']
             elif values['-DROPADDRESS-'] == "":
@@ -591,6 +641,16 @@ def main():
                 SMD = "1"
             elif values["-SMD-"] == False:
                 SMD = "0"
+            if values["-VIDWALL-"] == True:
+                channels = availablerecorderchannels(ADDRESS, USERNAME, PASSWORD)
+                print(info(red(channels)))
+                CHANNELSELECT = channels
+                pass
+            elif values["-VIDWALL-"] == False:
+                if len(values['-CHANNELSELECT-']) > 0:
+                    CHANNELSELECT = values['-CHANNELSELECT-']
+                if len(values['-CHANNELSELECT-']) == 0:
+                    CHANNELSELECT = 0
             if values["-STREAM0-"] == True:
                 STREAMSELECT = '0'
             elif values["-STREAM1-"] == True:
@@ -683,6 +743,19 @@ def main():
                 "You can select which Stream you want to see by clicking either 'Main Stream' or 'Sub Stream'\n\n"
                 "Clicking on 'Save Diagnostics File' will create a text file that includes some of the Settings of your camera.\n\n"
                 "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n", title="Help")
+
+
+        if event == '-PROJECTWEBSITE-':
+            openpageinbrowser("https://github.com/ColditzColligula/CCTV-Companion")
+
+        if event == '-BUGREPORT-':
+            bugreport = [sg.popup_get_text(("Bug Report\nPlease write a report detailing the bug/issue you're experiencing as well as the steps to reproduce this bug."), size=(80,3))]
+            webhook_post("https://webhook.grouplotse.com:4433/inc/19851500", "HpKg5TK5bhwL", bugreport)
+            [sg.PopupTimed("Bug Report was sent!", title="Sent", auto_close_duration=(1))]
+        if event == '-FEATUREREQUEST-':
+            featurerequest = [sg.popup_get_text(("Feature Request\nPlease write a report detailing the feature you would like to see implemented in CCTV-Companion."), size=(80,3))]
+            webhook_post("https://webhook.grouplotse.com:4433/inc/19857802", "jQoIZn8BW0Ch", featurerequest)
+            [sg.PopupTimed("Feature Request was sent!", title="Sent", auto_close_duration=(1))]
 
 #   Bandwidth Calculation
         if event == '-BANDWIDTHCALCULATE-':
