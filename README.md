@@ -38,8 +38,7 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 - Outputting Serial No., Model Name and Firmware Version of Device
 - Opening a Live View (RTSP Stream) with the ability to control a PTZ Camera (Up, Down, Left, Right, Zoom In/Out, Focus, Wiper On/Off)
    - Ability to select both channel and stream.
-   - Selecting Channel 0 on a DVR/XVR will open all streams as a single window.
-   - Selecting the Max Channel + 1 on a NVR will open all streams as a single window. (Example: Select Channel 5 on a 4-Channel NVR)
+   - Ability to open a Videowall (opens all available channels on the targeted recorder)
 - Copying a usable RTSP-Link to your Clipboard so it can easily be shared or pasted into other programs like VLC.
 - Opening the Web Interface of specified device
 - Rebooting Device
@@ -48,12 +47,13 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 - Factory Resetting a device and switching all settings to default value
 - Capacity Calculation (Counting # of cameras using specified codec and calculating expected bandwidth.
 - Recording Time (Calculating estimated recording time based on # of cameras, Bit Rate and specified Hard Drive Space in TeraByte.
+- Sending Bug Reports and Feature Requests
 
 ## Windows Executable
 
 Windows .exe File:
 
-[CCTVC 0.2.1.zip](https://www.dropbox.com/s/wpotkf6xs5ni7oy/CCTVC%200.2.1.zip?raw=1)
+[CCTVC 0.2.2.zip](https://www.dropbox.com/s/y713j25a0srn38t/CCTVC%200.2.2.zip?raw=1)
 
 ## Setup
 
@@ -80,7 +80,7 @@ Required:
 
 -OR-
 
-If you've downloaded the Windows executable from the link above, just extract the archive, navigate into the folder "CCTVC 0.2.1" and run "cctvc.exe" by double-clicking on it.
+If you've downloaded the Windows executable from the link above, just extract the archive, navigate into the folder "CCTVC 0.2.2" and run "cctvc.exe" by double-clicking on it.
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black) / ![Mac OS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
 
