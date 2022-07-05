@@ -70,15 +70,6 @@ If you're **not** using the Windows .exe file, make sure to install the required
 
 You can do this easily by utilizing the "requirements.txt" by opening a CMD/Shell and typing "pip install -r requirements.txt" (You must be in the same directory where the file is located)
 
-Required:
-- huepy==1.2.1
-- keyboard==0.13.5
-- numpy==1.22.3
-- opencv_python==4.5.5.64
-- pyperclip==1.8.2
-- PySimpleGUI==4.60.0
-- requests==2.27.1
-
 -OR-
 
 If you've downloaded the Windows executable from the link above, just extract the archive, navigate into the folder "CCTVC 0.2.2" and run "cctvc.exe" by double-clicking on it.
