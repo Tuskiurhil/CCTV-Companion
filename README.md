@@ -1,4 +1,5 @@
-![GitHubBanner Kopie](https://user-images.githubusercontent.com/79027579/177269582-4d57a0a5-8b1d-4d91-98e6-0f323afabadc.png)
+![GitHubBanner Kopie](https://user-images.githubusercontent.com/79027579/177290506-1f1d9155-6df0-4dab-9375-180c16030484.png)
+
 
 
 # CCTV-Companion
