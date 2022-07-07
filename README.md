@@ -1,5 +1,3 @@
-![GitHubBanner Kopie](https://user-images.githubusercontent.com/79027579/177290506-1f1d9155-6df0-4dab-9375-180c16030484.png)
-
 
 
 # CCTV-Companion
@@ -25,8 +23,6 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 
 ![grafik](https://user-images.githubusercontent.com/79027579/168796062-2162dbff-3abe-4c61-86d7-575506e1a7b2.png)
 
-![grafik](https://user-images.githubusercontent.com/79027579/177124403-006b4878-03f1-4142-9c3c-3ca8559cd334.png)
-
 
 ![grafik](https://user-images.githubusercontent.com/79027579/168796521-80777135-f4de-44cd-ba17-79065720aeed.png)
 
@@ -39,23 +35,19 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 - Object Detection using a pre-trained tensorflow model. This can be toggled ON/OFF.
 - Outputting Serial No., Model Name and Firmware Version of Device
 - Opening a Live View (RTSP Stream) with the ability to control a PTZ Camera (Up, Down, Left, Right, Zoom In/Out, Focus, Wiper On/Off)
-   - Ability to select both channel and stream.
-   - Ability to open a Videowall (opens all available channels on the targeted recorder)
 - Copying a usable RTSP-Link to your Clipboard so it can easily be shared or pasted into other programs like VLC.
 - Opening the Web Interface of specified device
 - Rebooting Device
 - Grabbing a Snapshot and displaying it
 - Saving a Diagnostics File (grabs some of the more important settings and infos on the device and saves them in a .txt)
 - Factory Resetting a device and switching all settings to default value
-- Capacity Calculation (Counting # of cameras using specified codec and calculating expected bandwidth.
-- Recording Time (Calculating estimated recording time based on # of cameras, Bit Rate and specified Hard Drive Space in TeraByte.
-- Sending Bug Reports and Feature Requests
+- Capacity Calculation (Counting # of cameras using specified codec and calculating expected bandwidth. Data gathered from Dahua Techs. Security Calculator)
 
 ## Windows Executable
 
-Windows .exe File:
+Windows .exe File: (05. May 2022, 10:16 AM) **OUTDATED**
 
-[CCTVC 0.2.2.zip](https://www.dropbox.com/s/y713j25a0srn38t/CCTVC%200.2.2.zip?raw=1)
+https://www.dropbox.com/s/1rbebdu6feqkbt7/CCTV%20Companion%20v0.1.exe?raw=1
 
 ## Setup
 
@@ -64,16 +56,21 @@ The application works on Windows and Unix/MacOS.
 
 ![Windows](https://img.shields.io/badge/Windows-0078D6?style=for-the-badge&logo=windows&logoColor=white)
 
-The windows build comes with a dedicated executable. There is no need to download the .py files, just download the .zip archive from the link above.
 
 [Download the Github Repository](https://github.com/ColditzColligula/CCTV-Companion/archive/refs/heads/main.zip) and open the "cctvc.py" file with Python3.
-If you're **not** using the Windows .exe file, make sure to install the required libraries.
+If you're **not** using the Windows .exe file (Outdated!), make sure to install the required libraries.
 
 You can do this easily by utilizing the "requirements.txt" by opening a CMD/Shell and typing "pip install -r requirements.txt" (You must be in the same directory where the file is located)
 
--OR-
+Required:
+- huepy==1.2.1
+- keyboard==0.13.5
+- numpy==1.22.3
+- opencv_python==4.5.5.64
+- pyperclip==1.8.2
+- PySimpleGUI==4.60.0
+- requests==2.27.1
 
-If you've downloaded the Windows executable from the link above, just extract the archive, navigate into the folder "CCTVC 0.2.2" and run "cctvc.exe" by double-clicking on it.
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black) / ![Mac OS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
 
