@@ -89,17 +89,35 @@ sg.theme('Darkgrey5')
 def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
 
 
-    con_layout = [[sg.Text(CONNECTEDDEVICE, key="-CONNECTEDDEVICE-")],
-              #[sg.Button('Check')],
+    con_layout = [
+              #[sg.Text(f'{CONNECTEDDEVICE}')],
+              [sg.Text("____________________\nRTSP-Stream", text_color="red")],
               [sg.Text('Select Channel'), sg.Input('1', key='-CHANNELSELECT-', size=(4, 1)), sg.Push()],
               [sg.Radio('Main Stream', 'STREAM', default=True, key='-STREAM0-'), sg.Radio('Sub Stream', 'STREAM', key='-STREAM1-')],
               [sg.Checkbox('Object Detection', default=False, key="-SMD-"), sg.Checkbox('Videowall', default=False, key="-VIDWALL-")],
-              [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
+              [sg.Button('Live View'), sg.Button('Copy RTSP Link')],
+
+              [sg.Text("____________________\nDevice Info", text_color="red")],
+              [sg.Button('Max Extra Streams', button_color="red"), sg.Button('Encoding Configuration', button_color="red"),sg.Button('Channel Title', button_color="red")],
+              [sg.Button('Device Time', button_color="red"), sg.Button('Available Languages', button_color="red")],
+
+              [sg.Text("____________________\nNetwork Info", text_color="red")],
+              [sg.Button('Network Config', button_color="red"), sg.Button('PPPoE Config', button_color="red"), sg.Button('DDNS Config', button_color="red")],
+              [sg.Button('E-Mail Config', button_color="red"), sg.Button('WLan Config', button_color="red")],
+
+              [sg.Text("____________________\nUser Management", text_color="red")],
+              [sg.Button('Get User Info', button_color="red"), sg.Button('Get Groups Info', button_color="red"), sg.Button('Add new User', button_color="red"), sg.Button('Delete User', button_color="red")],
+              [sg.Button('Change User Info', button_color="red"), sg.Button('Change User Password', button_color="red")],
+
+              [sg.Text("____________________\nLogs", text_color="red")],
+              [sg.Button('Find Logs', button_color="red"), sg.Button('Clear All Logs', button_color="red"), sg.Button('Backup Logs', button_color="red")],
+
+              [sg.Text("____________________\nMaintenance", text_color="red")],
               [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
               [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
-              [sg.Button('Disconnect'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="red")]
+              [sg.Button('Disconnect'), sg.Push(), sg.Button('Web Interface'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="cyan")]
               ]
-    window = sg.Window(f"Connected with: {ADDRESS}", con_layout, modal=False)
+    window = sg.Window(f"{CONNECTEDDEVICE} at {ADDRESS}", con_layout, modal=False)
     while True:
         event, values = window.read()
         #window['-CONNECTEDDEVICE-'].update("Connected with: " + ADDRESS + "\n" + str(CONNECTEDDEVICE))
@@ -412,11 +430,8 @@ def main():
             CCTVC.add_cam_to_settings(CCTVC, ADDRESS)
             print(ADDRESS)
 
-            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-            diagnosticslist = [
-                "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getSerialNo",
-                "/cgi-bin/magicBox.cgi?action=getSoftwareVersion",
-            ]
+            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
+            devicetypeAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
             if len(USERNAME) == 0 or len(PASSWORD) == 0:
                 [sg.Popup("You must fill out all fields.")]
                 window.close()
@@ -428,16 +443,18 @@ def main():
             print("response code:\n" + str(response.status_code))
             if response.status_code == 200:
                 readout = []
-                for apirequest in diagnosticslist:
-                    APIURL = ("http://" + ADDRESS + apirequest)
-                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                    response.encoding = 'utf-8-sig'
-                    if response.status_code == 200:
-                        print(apirequest + str(response.text))
-                        readout.append(str(response.text))
+                APIURL = ("http://" + ADDRESS + devicetypeAPI)
+                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                response.encoding = 'utf-8-sig'
+                if response.status_code == 200:
+                    print(devicetypeAPI + str(response.text))
+                    readout.append(str(response.text))
                 CONNECTEDDEVICE = "".join(readout)
+                camtypecpl = CONNECTEDDEVICE.split("type=")
+                camtypefin = camtypecpl[1]
+                print(camtypefin)
                 #window['-MAINTOUTPUT-'].update("Connected with: " + ADDRESS + "\n" + str(CONNECTEDDEVICE))
-                connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE)
+                connected_window(ADDRESS, USERNAME, PASSWORD, camtypefin)
                 # window['-MAINTOUTPUT-'].update(str(response.text))
                 # print("\nLogin successful:\n" +str(response.text))
             if response.status_code == 401:
