@@ -115,7 +115,7 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
               [sg.Text("____________________\nMaintenance", text_color="red")],
               [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
               [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
-              [sg.Button('Disconnect'), sg.Push(), sg.Button('Web Interface'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="cyan")]
+              [sg.Button('Disconnect'), sg.Push(), sg.Button('Web Interface'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="orange")]
               ]
     window = sg.Window(f"{CONNECTEDDEVICE} at {ADDRESS}", con_layout, modal=False)
     while True:
@@ -418,48 +418,53 @@ def main():
 #   Camera Maintenance
     #   Open Maintenance Window of Connected Device
         if event == "Connect":
-            ADDRESS = ""
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
+            try:
+                ADDRESS = ""
+                if len(values['-DROPADDRESS-']) > 0:
+                    ADDRESS = values['-DROPADDRESS-']
+                elif values['-DROPADDRESS-'] == "":
+                    ADDRESS = values['-ADDRESSMAINT-']
+                USERNAME = values['-USERNAMEMAINT-']
+                PASSWORD = values['-PASSWORDMAINT-']
 
-            # adding camera to settings file
-            CCTVC.add_cam_to_settings(CCTVC, ADDRESS)
-            print(ADDRESS)
+                if CCTVC.ping(CCTVC, ADDRESS) == True:
+                    # adding camera to settings file
+                    CCTVC.add_cam_to_settings(CCTVC, ADDRESS)
+                    print(ADDRESS)
 
-            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
-            devicetypeAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
-            if len(USERNAME) == 0 or len(PASSWORD) == 0:
-                [sg.Popup("You must fill out all fields.")]
-                window.close()
-                main()
-                # break
-            APIURL = ("http://" + ADDRESS + TARGETAPI)
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-            response.encoding = 'utf-8-sig'
-            print("response code:\n" + str(response.status_code))
-            if response.status_code == 200:
-                readout = []
-                APIURL = ("http://" + ADDRESS + devicetypeAPI)
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                response.encoding = 'utf-8-sig'
-                if response.status_code == 200:
-                    print(devicetypeAPI + str(response.text))
-                    readout.append(str(response.text))
-                CONNECTEDDEVICE = "".join(readout)
-                camtypecpl = CONNECTEDDEVICE.split("type=")
-                camtypefin = camtypecpl[1]
-                print(camtypefin)
-                #window['-MAINTOUTPUT-'].update("Connected with: " + ADDRESS + "\n" + str(CONNECTEDDEVICE))
-                connected_window(ADDRESS, USERNAME, PASSWORD, camtypefin)
-                # window['-MAINTOUTPUT-'].update(str(response.text))
-                # print("\nLogin successful:\n" +str(response.text))
-            if response.status_code == 401:
-                sg.PopupError("Authentication Unsuccesful\n-Wrong Username or Password-")
-                #window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+                    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
+                    devicetypeAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
+                    if len(USERNAME) == 0 or len(PASSWORD) == 0:
+                        [sg.Popup("You must fill out all fields.")]
+                        window.close()
+                        main()
+                        # break
+                    APIURL = ("http://" + ADDRESS + TARGETAPI)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    response.encoding = 'utf-8-sig'
+                    print("response code:\n" + str(response.status_code))
+                    if response.status_code == 200:
+                        readout = []
+                        APIURL = ("http://" + ADDRESS + devicetypeAPI)
+                        response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                        response.encoding = 'utf-8-sig'
+                        if response.status_code == 200:
+                            print(devicetypeAPI + str(response.text))
+                            readout.append(str(response.text))
+                        CONNECTEDDEVICE = "".join(readout)
+                        camtypecpl = CONNECTEDDEVICE.split("type=")
+                        camtypefin = camtypecpl[1]
+                        print(camtypefin)
+                        #window['-MAINTOUTPUT-'].update("Connected with: " + ADDRESS + "\n" + str(CONNECTEDDEVICE))
+                        connected_window(ADDRESS, USERNAME, PASSWORD, camtypefin)
+                        # window['-MAINTOUTPUT-'].update(str(response.text))
+                        # print("\nLogin successful:\n" +str(response.text))
+                    if response.status_code == 401:
+                        sg.PopupError("Authentication Unsuccesful\n-Wrong Username or Password-")
+                        #window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+            except:
+                sg.Popup("Connection Timed Out. \n\nPlease Check your Internet Connection or"
+                         " if the Device you're trying to reach is online.", title="Connection Timed Out")
 
 
 
