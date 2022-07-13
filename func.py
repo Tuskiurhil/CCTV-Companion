@@ -17,6 +17,11 @@ from requests.auth import HTTPDigestAuth
 
 class CCTVC:
 
+    def updatecheck(self):
+        response = requests.get("https://api.github.com/repos/ColditzColligula/CCTV-Companion/releases/latest")
+        # print(response.json()["tag_name"])
+        return response.json()["tag_name"]
+
     def splashscreen(self):
         """Displaying a splashscreen on startup if 'splashscreen.png' was found in main folder"""
         try:
@@ -93,64 +98,76 @@ class CCTVC:
 
     def ptz_movement(self, ADDRESS, USERNAME, PASSWORD, ):
         """Allows control of PTZ Cameras through Dahua API calls over HTTP Requests"""
+        ptz_active = False
         while True:
+            return ptz_active
             event = keyboard.read_event()
-            if event.event_type == keyboard.KEY_DOWN and event.name == 's':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                time.sleep(1)
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            if event.event_type == keyboard.KEY_DOWN and event.name == 'alt' and 'p':
+                if ptz_active == False:
+                    ptz_active = True
+                    print("PTZ Controls Activated")
+                elif ptz_active == True:
+                    ptz_active = False
+                    print("PTZ Controls Deactivated")
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'w':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                time.sleep(1)
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            if ptz_active == True:
+                if event.event_type == keyboard.KEY_DOWN and event.name == 's':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    time.sleep(1)
+                    print("DOWN")
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'a':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                time.sleep(1)
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'w':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    time.sleep(1)
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'd':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                time.sleep(1)
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'a':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    time.sleep(1)
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'q':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                time.sleep(1)
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'd':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    time.sleep(1)
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'e':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                time.sleep(1)
-                APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'q':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    time.sleep(1)
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'f':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/devVideoInput.cgi?action=autoFocus"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                print("Autofocusing...")
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'e':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    time.sleep(1)
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'n':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/rainBrush.cgi?action=moveContinuously&interval=5"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                print(good(green("Wiper ON")))
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'f':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/devVideoInput.cgi?action=autoFocus"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    print("Autofocusing...")
 
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'm':
-                APIURL = "http://" + ADDRESS + "/cgi-bin/rainBrush.cgi?action=stopMove"
-                response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-                print(bad(red("Wiper OFF")))
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'n':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/rainBrush.cgi?action=moveContinuously&interval=5"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    print(good(green("Wiper ON")))
+
+                if event.event_type == keyboard.KEY_DOWN and event.name == 'm':
+                    APIURL = "http://" + ADDRESS + "/cgi-bin/rainBrush.cgi?action=stopMove"
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    print(bad(red("Wiper OFF")))
 
     def openimage(self, imagepath, SMD):
         """Opens an Image and displays it for viewing. If the SMD Checkbox has been ticket, object recognition

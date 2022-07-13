@@ -6,6 +6,7 @@ import pyperclip
 import os 
 import threading
 import multiprocessing
+import sys
 import keyboard
 import json
 import time
@@ -24,6 +25,7 @@ TARGETAPI = ""
 STREAMPAUSE = False
 
 detectedObjectResponse_isRunning = 0
+
 
 # _________________________________________
 #   Read Config File if available
@@ -98,19 +100,20 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
               [sg.Button('Live View'), sg.Button('Copy RTSP Link')],
 
               [sg.Text("____________________\nDevice Info", text_color="red")],
-              [sg.Button('Max Extra Streams', button_color="red"), sg.Button('Encoding Configuration', button_color="red"),sg.Button('Channel Title', button_color="red")],
-              [sg.Button('Device Time', button_color="red"), sg.Button('Available Languages', button_color="red")],
+              [sg.Button('Serial No.'), sg.Button('Firmware Version')],
+              #[sg.Button('Max Extra Streams', button_color="red"), sg.Button('Encoding Configuration', button_color="red"),sg.Button('Channel Title', button_color="red")],
+              #[sg.Button('Device Time', button_color="red"), sg.Button('Available Languages', button_color="red")],
 
-              [sg.Text("____________________\nNetwork Info", text_color="red")],
-              [sg.Button('Network Config', button_color="red"), sg.Button('PPPoE Config', button_color="red"), sg.Button('DDNS Config', button_color="red")],
-              [sg.Button('E-Mail Config', button_color="red"), sg.Button('WLan Config', button_color="red")],
+              #[sg.Text("____________________\nNetwork Info", text_color="red")],
+              #[sg.Button('Network Config', button_color="red"), sg.Button('PPPoE Config', button_color="red"), sg.Button('DDNS Config', button_color="red")],
+              #[sg.Button('E-Mail Config', button_color="red"), sg.Button('WLan Config', button_color="red")],
 
-              [sg.Text("____________________\nUser Management", text_color="red")],
-              [sg.Button('Get User Info', button_color="red"), sg.Button('Get Groups Info', button_color="red"), sg.Button('Add new User', button_color="red"), sg.Button('Delete User', button_color="red")],
-              [sg.Button('Change User Info', button_color="red"), sg.Button('Change User Password', button_color="red")],
+              #[sg.Text("____________________\nUser Management", text_color="red")],
+              #[sg.Button('Get User Info', button_color="red"), sg.Button('Get Groups Info', button_color="red"), sg.Button('Add new User', button_color="red"), sg.Button('Delete User', button_color="red")],
+              #[sg.Button('Change User Info', button_color="red"), sg.Button('Change User Password', button_color="red")],
 
-              [sg.Text("____________________\nLogs", text_color="red")],
-              [sg.Button('Find Logs', button_color="red"), sg.Button('Clear All Logs', button_color="red"), sg.Button('Backup Logs', button_color="red")],
+              #[sg.Text("____________________\nLogs", text_color="red")],
+              #[sg.Button('Find Logs', button_color="red"), sg.Button('Clear All Logs', button_color="red"), sg.Button('Backup Logs', button_color="red")],
 
               [sg.Text("____________________\nMaintenance", text_color="red")],
               [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
@@ -313,6 +316,7 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
                 "Use the 'Select Channel' Field to specify the Channel you want to see.\n\n"
                 "Live View allows you to see the live-stream of your device.\n\n"
                 "~PTZ-Controls:~\n"
+                "ALT+P      -   Toggle PTZ Controls On/Off\n"
                 "W,A,S,D    -   Moving Up, Left, Down, Right\n"
                 "Q,E        -   Zoom Out, Zoom In\n"
                 "F          -   Autofocus\n"
@@ -321,6 +325,17 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
                 "Clicking on 'Save Diagnostics File' will create a text file that includes some of the Settings of your camera.\n\n"
                 "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n",
                 title="Help")
+
+        if event == 'Serial No.':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/magicBox.cgi?action=getSerialNo")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                serialno = response.text.split("sn=")
+                window['-MAINTOUTPUT-'].update(str(serialno))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
 
     window.close()
 
@@ -575,4 +590,13 @@ def main():
 #   Required for Multiprocessing to work on Windows Based OS
 if __name__ == '__main__':
     multiprocessing.freeze_support()
-    main()
+    try:
+        if CCTVC.updatecheck(CCTVC) != "0.2.1":
+            print("Update Available!")
+            if sg.popup_yes_no('An Update for CCTV-Companion is available.\nDo you want to update?') == 'Yes':
+                CCTVC.openpageinbrowser(CCTVC, "https://github.com/ColditzColligula/CCTV-Companion/releases/latest")
+                sys.exit()
+    except:
+        sys.exit("Taking you to the update page...")
+    else:
+        main()
