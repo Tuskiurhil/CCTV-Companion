@@ -55,7 +55,7 @@ CCTV-Companion is a Python-Script that aims to help in both planning, setting up
 
 Windows .exe File:
 
-[CCTVC 0.2.2.zip](https://www.dropbox.com/s/y713j25a0srn38t/CCTVC%200.2.2.zip?raw=1)
+[CCTVC 0.3.zip](https://www.dropbox.com/s/bkputwq8fnhaa0r/CCTVC0.3.zip?raw=1)
 
 ## Setup
 
@@ -73,7 +73,7 @@ You can do this easily by utilizing the "requirements.txt" by opening a CMD/Shel
 
 -OR-
 
-If you've downloaded the Windows executable from the link above, just extract the archive, navigate into the folder "CCTVC 0.2.2" and run "cctvc.exe" by double-clicking on it.
+If you've downloaded the Windows executable from the link above, just extract the archive, and run the program by double-clicking on the CCTV Companion Shortcut.
 
 ![Linux](https://img.shields.io/badge/Linux-FCC624?style=for-the-badge&logo=linux&logoColor=black) / ![Mac OS](https://img.shields.io/badge/mac%20os-000000?style=for-the-badge&logo=macos&logoColor=F0F0F0)
 
