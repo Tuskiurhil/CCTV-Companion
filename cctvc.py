@@ -6,12 +6,14 @@ import pyperclip
 import os 
 import threading
 import multiprocessing
+import sys
 import keyboard
 import json
 import time
 import requests
 import platform
 import subprocess
+from func import CCTVC
 from huepy import *
 from requests.auth import HTTPDigestAuth
 
@@ -20,11 +22,8 @@ USERNAME = ""
 PASSWORD = ""
 TARGETAPI = ""
 
-STREAMPAUSE = False
-
-
-
 detectedObjectResponse_isRunning = 0
+
 
 # _________________________________________
 #   Read Config File if available
@@ -72,33 +71,11 @@ elif isFile == True:
             dropdown_selection = 0
 
         cctvc_settings.close()
-# _________________________________________
-#   Object Recognition Parameters
-thresholdValue = 0.57
-
-windowName = "Output"
-classNames = []
-classFile = "coco.names"
-with open(classFile,'rt') as f:
-    classNames = [line.rstrip() for line in f]
-# print(classNames)
-
-configPath = "ssd_mobilenet_v3_large_coco_2020_01_14.pbtxt"
-weightsPath = "frozen_inference_graph.pb"
-
-#   Object Detection Accuracy Neuron Input
-net = cv2.dnn_DetectionModel(weightsPath,configPath)
-net.setInputSize(320,320) # Accuracy of detection
-net.setInputScale(1.0/ 127.5)
-net.setInputMean((127.5, 127.5, 127.5))
-net.setInputSwapRB(True)
-# _________________________________________
-
 
 #   specifying custom theme
 CCTV_Theme = {'BACKGROUND': '#006d74',
-               'TEXT': 'white',
-               'INPUT': '#DDE0DE',
+              'TEXT': 'white',
+              'INPUT': '#DDE0DE',
                'SCROLL': '#E3E3E3',
                'TEXT_INPUT': 'black',
                'BUTTON': ('black', '#f08000'),
@@ -109,269 +86,305 @@ CCTV_Theme = {'BACKGROUND': '#006d74',
 sg.theme_add_new('CCTV_Theme', CCTV_Theme)
 sg.theme('Darkgrey5')
 
-
-def splashscreen():
-    """Displaying a splashscreen on startup if 'splashscreen.png' was found in main folder"""
-    try:
-        splashscreen = "splashscreen.png"
-        isExist = os.path.exists(splashscreen)
-        if isExist == True:
-            DISPLAY_TIME_MILLISECONDS = 600
-            sg.Window('Splashscreen', [[sg.Image(splashscreen)]], transparent_color=sg.theme_background_color(),
-                      no_titlebar=True, keep_on_top=True).read(timeout=DISPLAY_TIME_MILLISECONDS, close=True)
-        elif isExist == False:
-            pass
-    except:
-        pass
+def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
 
 
-def availablerecorderchannels(ADDRESS,USERNAME,PASSWORD,):
-    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
-    APIURL = ("http://" + ADDRESS + TARGETAPI)
-    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
-    response.encoding = 'utf-8-sig'
-    print("response code:\n" + str(response.status_code))
-    if response.status_code == 200:
-        recordertype = (response.text)
-        print(good(green(recordertype)))
-        if "XVR" in recordertype:
-            channels = "0"
-            print("Starting Videowall for Digital Video Recorder on all Channels")
-            return channels
-        if "NVR" in recordertype:
-            recordername = recordertype.split("type=DHI-NVR")
-            recorderchannels = recordername[1]
-            totalrecorderchannels = recorderchannels[2:4]
-            print(recordername[1])
-            print(f'Channels available: {totalrecorderchannels}')
-            videowallchannel = int(totalrecorderchannels) + 1
-            print(f'Selecting Videowall-Channel {videowallchannel}')
-            channels = str(videowallchannel)
-            return channels
-    if response.status_code == 401:
-        print("Authentication Unsuccesful\n-Wrong Username or Password-")
+    con_layout = [
+              #[sg.Text(f'{CONNECTEDDEVICE}')],
+              [sg.Text("____________________\nRTSP-Stream", text_color="red")],
+              [sg.Text('Select Channel'), sg.Input('1', key='-CHANNELSELECT-', size=(4, 1)), sg.Push()],
+              [sg.Radio('Main Stream', 'STREAM', default=True, key='-STREAM0-'), sg.Radio('Sub Stream', 'STREAM', key='-STREAM1-')],
+              [sg.Checkbox('Object Detection', default=False, key="-SMD-"), sg.Checkbox('Videowall', default=False, key="-VIDWALL-")],
+              [sg.Button('Live View'), sg.Button('Copy RTSP Link')],
 
+              [sg.Text("____________________\nDevice Info", text_color="red")],
+              [sg.Button('Serial No.'), sg.Button('Firmware Version'), sg.Button('Onvif Version')],
+              [sg.Button('HTTP API Version'), sg.Button('Device Class')],
+              #[sg.Button('Max Extra Streams', button_color="red"), sg.Button('Encoding Configuration', button_color="red"),sg.Button('Channel Title', button_color="red")],
+              #[sg.Button('Device Time', button_color="red"), sg.Button('Available Languages', button_color="red")],
 
-def ping(host):
-    """Checking if entered IP is valid and can be reached"""
-    param = '-n' if platform.system().lower()=='windows' else '-c'
-    command = ['ping', param, '1', host]
-    return subprocess.call(command) == 0
+              #[sg.Text("____________________\nNetwork Info", text_color="red")],
+              #[sg.Button('Network Config', button_color="red"), sg.Button('PPPoE Config', button_color="red"), sg.Button('DDNS Config', button_color="red")],
+              #[sg.Button('E-Mail Config', button_color="red"), sg.Button('WLan Config', button_color="red")],
 
-def add_cam_to_settings(ADDRESS):
-    # adding camera to settings file
-    settingslines = []
-    with open("cctvc_settings.txt", "r+") as cctvc_settings:
-        listing = cctvc_settings.read()
-        if not listing:
-            cctvc_settings.write("\n" + ADDRESS)  # append missing data
-            print(good(green(f'Saved {ADDRESS} to list')))
-            cctvc_settings.close()
-        else:
-            if listing.find(ADDRESS) >= 0:
-                print(bad(red(f'{ADDRESS} already in list, not saved')))
-                cctvc_settings.close()
-            else:
-                print(good(green(f'Saved {ADDRESS} to list')))
-                cctvc_settings.write("\n" + ADDRESS)  # append missing data
-                cctvc_settings.close()
+              #[sg.Text("____________________\nUser Management", text_color="red")],
+              #[sg.Button('Get User Info', button_color="red"), sg.Button('Get Groups Info', button_color="red"), sg.Button('Add new User', button_color="red"), sg.Button('Delete User', button_color="red")],
+              #[sg.Button('Change User Info', button_color="red"), sg.Button('Change User Password', button_color="red")],
 
+              #[sg.Text("____________________\nLogs", text_color="red")],
+              #[sg.Button('Find Logs', button_color="red"), sg.Button('Clear All Logs', button_color="red"), sg.Button('Backup Logs', button_color="red")],
 
-def detectedObjectResponse():
-    """Handling of object detection as a seperate function"""
-    #global detectedObjectResponse_isRunning
-    #print(info(yellow("I'm sending a webhook to GroupLotse!")))
-    #webhook_url = "https://webhook.grouplotse.com:4433/inc/18997579?key=QJu7OB5FjoGk"
-    #data = "I have detected a Person in the Image!"
-    #requests.post(webhook_url, data=json.dumps(data), headers={'Content-Type': 'application/json'})
-    #time.sleep(8)
-    #detectedObjectResponse_isRunning = 0
-
-
-def ptz_movement(ADDRESS,USERNAME,PASSWORD,):
-    """Allows control of PTZ Cameras through Dahua API calls over HTTP Requests"""
+              [sg.Text("____________________\nMaintenance", text_color="red")],
+              [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
+              [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
+              [sg.Button('Disconnect'), sg.Push(), sg.Button('Web Interface'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="orange")]
+              ]
+    window = sg.Window(f"{CONNECTEDDEVICE} at {ADDRESS}", con_layout, modal=False)
     while True:
-        event = keyboard.read_event()
-        if event.event_type == keyboard.KEY_DOWN and event.name == 's':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            time.sleep(1)
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'w':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            time.sleep(1)
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Up&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'a':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            time.sleep(1)
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Left&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'd':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            time.sleep(1)
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=Right&arg1=0&arg2=2&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'q':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            time.sleep(1)
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomWide&arg1=0&arg2=0&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'e':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=start&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            time.sleep(1)
-            APIURL = "http://"+ADDRESS+"/cgi-bin/ptz.cgi?action=stop&channel=1&code=ZoomTele&arg1=0&arg2=0&arg3=0"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'f':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/devVideoInput.cgi?action=autoFocus"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print("Autofocusing...")
-
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'n':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/rainBrush.cgi?action=moveContinuously&interval=5"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print(good(green("Wiper ON")))
-            
-        if event.event_type == keyboard.KEY_DOWN and event.name == 'm':
-            APIURL = "http://"+ADDRESS+"/cgi-bin/rainBrush.cgi?action=stopMove"
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print(bad(red("Wiper OFF")))
-
-
-def openimage(imagepath, SMD):
-    """Opens an Image and displays it for viewing. If the SMD Checkbox has been ticket, object recognition
-    will be employed"""
-
-    imagetbo = "".join(imagepath)
-    image = cv2.imread(imagetbo)
-    if SMD == "1":
-        classIds, confs, bbox = net.detect(image, confThreshold=thresholdValue)
-    text_color_top = (255, 255, 255)
-    text_color_bot = (0, 0, 0)
-    cv2.namedWindow(str(imagetbo), cv2.WINDOW_NORMAL)
-    if SMD == "1":
-        if len(classIds) != 0:
-            for classId, confidence, box in zip(classIds.flatten(), confs.flatten(), bbox):
-                if classId == 1:
-                    cv2.rectangle(image, box, color=(0, 0, 255), thickness=2)
-                    cv2.putText(image, classNames[classId - 1].upper(), (box[0] + 10, box[1] + 30),
-                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
-                    cv2.putText(image, str(round(confidence * 100, 2)), (box[0] + 200, box[1] + 30),
-                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 0, 255), 2)
-                else:
-                    cv2.rectangle(image, box, color=(0, 255, 0), thickness=1)
-                    cv2.putText(image, classNames[classId - 1].upper(), (box[0] + 10, box[1] + 30),
-                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-                    cv2.putText(image, str(round(confidence * 100, 2)), (box[0] + 200, box[1] + 30),
-                                cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-    cv2.imshow(str(imagetbo), image)
-    cv2.waitKey(0)
-
-
-def opencamerastream(ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, SMD, WEBCAM):
-    global detectedObjectResponse_isRunning
-    if WEBCAM == "1":
-        capture = cv2.VideoCapture(0)
-    elif WEBCAM == "0":
-        capture = cv2.VideoCapture(str(
-            "rtsp://" + USERNAME +":" + PASSWORD +"@" + ADDRESS +'/cam/realmonitor?channel=' + CHANNELSELECT + '&subtype=' + STREAMSELECT
-            ))
-#   PTZ Control
-    ptz_control = multiprocessing.Process(target=ptz_movement, args=(ADDRESS,USERNAME,PASSWORD,))
-    ptz_control.daemon = True
-    ptz_control.start()
-
-    while(capture.isOpened()):
-
-        if SMD == "1":
-            success, img = capture.read()
-            classIds, confs, bbox = net.detect(img,confThreshold=thresholdValue)
-        ret, frame = capture.read()
-
-#   Allowing to resize the window
-        text_color_top = (255,255,255)
-        text_color_bot = (0,0,0)
-        cv2.namedWindow(str(ADDRESS), cv2.WINDOW_NORMAL)
-        #   Drawing Rectangles and Names for Object Recognition
-        if SMD == "1":
-            if len(classIds) != 0:
-                for classId, confidence, box in zip(classIds.flatten(),confs.flatten(),bbox):
-                    if classId == 1:
-                        cv2.rectangle(frame, box, color=(0,0,255),thickness=2)
-                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),
-                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
-                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),
-                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,0,255),2)
-                    else:
-                        cv2.rectangle(frame, box, color=(0,255,0),thickness=1)
-                        cv2.putText(frame,classNames[classId-1].upper(),(box[0]+10,box[1]+30),
-                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
-                        cv2.putText(frame,str(round(confidence*100,2)),(box[0]+200,box[1]+30),
-                                    cv2.FONT_HERSHEY_COMPLEX,1,(0,255,0),2)
-                    if classId == int(1) and detectedObjectResponse_isRunning == 0:
-                        detection = threading.Thread(target=detectedObjectResponse)
-                        detection.start()
-                        detectedObjectResponse_isRunning = 1
-        if WEBCAM == "1":
-            cv2.putText(frame, "CAM", (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
-            cv2.putText(frame, "CAM", (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
-        elif WEBCAM == "0":
-            cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
-            cv2.putText(frame, ADDRESS, (30,40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
-        cv2.imshow(str(ADDRESS), frame)
-        if cv2.waitKey(1) & 0xFF == ord('p'):
+        event, values = window.read()
+        #window['-CONNECTEDDEVICE-'].update("Connected with: " + ADDRESS + "\n" + str(CONNECTEDDEVICE))
+        if event == "Disconnect" or event == sg.WIN_CLOSED:
             break
+        #   Diagnostics
+        if event == 'Save Diagnostics File' and sg.popup_yes_no(
+                'This will gather a lot of Data about the Device and store it in a Text File.\nThis might take a few seconds.\n\nStart the Diagnostics?') == 'Yes':
+            CCTVC.add_cam_to_settings(CCTVC, ADDRESS)
+            diagnosticslist = [
+                "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getHardwareVersion",
+                "/cgi-bin/magicBox.cgi?action=getSerialNo", "/cgi-bin/magicBox.cgi?action=getMachineName",
+                "/cgi-bin/magicBox.cgi?action=getSystemInfo", "/cgi-bin/magicBox.cgi?action=getVendor",
+                "/cgi-bin/magicBox.cgi?action=getSoftwareVersion",
+                "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=Onvif",
+                "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=CGI",
+                "/cgi-bin/magicBox.cgi?action=getDeviceClass", "/cgi-bin/userManager.cgi?action=getUserInfoAll"
+            ]
+            progresstarget = 0
+            if len(USERNAME) == 0 or len(PASSWORD) == 0:
+                [sg.Popup("You must fill out all fields.")]
+                window.close()
+                main()
+            diagfilename = ("diagnostics_" + ADDRESS + ".txt")
+            with open(diagfilename, 'w') as diagfile:
+                for apirequest in diagnosticslist:
+                    APIURL = ("http://" + ADDRESS + apirequest)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    response.encoding = 'utf-8-sig'
+                    if response.status_code == 200:
+                        print("\n" + apirequest + "\n" + str(response.text))
+                        diagfile.write("\n" + apirequest + "\n" + str(response.text))
+                        progresstarget += 1
 
-#   Taking a Snapshot of the live stream
-        if cv2.waitKey(1) & 0xFF == ord('b'):
-            stream_screenshot = capture.read()[1]
-            cv2.imwrite("screenshot"+".png", stream_screenshot)
-
-#   Checks if the Window is being closed by pressing the "X" button, if the window becomes invisible it'll break
-        if cv2.getWindowProperty(str(ADDRESS), cv2.WND_PROP_VISIBLE) <1:
-            break
-    capture.release()
-    cv2.destroyAllWindows()
-    WEBCAM = "0"
+                    if response.status_code == 401:
+                        [sg.Popup("Invalid Username and/or Password")]
+            window['-MAINTOUTPUT-'].update(str("Diagnostics Saved!"))
+            [sg.Popup("Diagnostics File saved as diagnostics_" + ADDRESS + ".txt")]
+            progresstarget = 0
 
 
-def webhook_post(webhook_addr, webhook_key, webhook_msg):
-    """Main function to send Text via Webhook.
-    webhook_addr is the URL of your Webhook. webhook_key is the Key.
-    Pass a String to webhook_msg and call the method."""
-    webhook_lotse = webhook_addr + "?key=" + webhook_key
+        #   Camera Maintenance
+        #   Diagnostics
+        if event == 'Delete List':
+            if os.path.exists("cctvc_settings.txt"):
+                os.remove("cctvc_settings.txt")
+                [sg.PopupOK('Device Address history deleted...')]
+            else:
+                pass
 
-    try:
-        requests.post(
-            webhook_lotse,
-            data=json.dumps(webhook_msg),
-            headers={"Content-Type": "application/json"},
-        )
-        print('OK')
-    except:
-        raise Exception(
-            "ERR!"
-        )
+            #   Camera Maintenance
+        #   Rebooting the Camera
+        if event == 'Reboot' and sg.popup_yes_no('This will restart your device, are you sure?') == 'Yes':
+            # adding camera to settings file
+            CCTVC.add_cam_to_settings(CCTVC, ADDRESS)
+            TARGETAPI = "/cgi-bin/magicBox.cgi?action=reboot"
+            if len(USERNAME) == 0 or len(PASSWORD) == 0:
+                [sg.Popup("You must fill out all fields.")]
+                window.close()
+                main()
+                # break
+            APIURL = ("http://" + ADDRESS + TARGETAPI)
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                window['-MAINTOUTPUT-'].update(str(response.text))
+                print("\nLogin successful:\n" + str(response.text))
+            if response.status_code == 401:
+                [sg.Popup("Invalid Username and/or Password")]
 
+        #   Camera Maintenance
+        #   Will call a snapshot and display it as a .jpg in the standard browser
+        if event == 'Snapshot':
+            TARGETAPI = "/cgi-bin/snapshot.cgi"
+            serialnoapi = threading.Thread(
+                target=CCTVC.webbrowserapiwindow(CCTVC, ADDRESS, USERNAME, PASSWORD, TARGETAPI))
+            serialnoapi.start()
 
-def webbrowserapiwindow(ADDRESS, USERNAME, PASSWORD, TARGETAPI):
-    webbrowser.open("http://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+TARGETAPI)
+        #   Factory Resetting the Camera
+        if event == 'Factory Reset' and sg.popup_yes_no(
+                "This will factory reset your device, are you sure?\nAll settings will be returned to their default value!") == "Yes":
+            if sg.popup_yes_no("This change cannot be reverted!", text_color="red", font="bold") == "Yes":
+                sg.popup_timed("Factory Resetting...")
+                # adding camera to settings file
+                CCTVC.add_cam_to_settings(CCTVC, ADDRESS)
 
+                TARGETAPI = "/cgi-bin/magicBox.cgi?action=resetSystemEx&type=0"
+                if len(USERNAME) == 0 or len(PASSWORD) == 0:
+                    [sg.Popup("You must fill out all fields.")]
+                    window.close()
+                    main()
+                    # break
+                if len(USERNAME) == 0 or len(PASSWORD) != 0:
+                    APIURL = ("http://" + ADDRESS + TARGETAPI)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    print("response code:\n" + str(response.status_code))
+                    if response.status_code == 200:
+                        window['-MAINTOUTPUT-'].update(str(response.text))
+                        print("\nLogin successful:\n" + str(response.text))
+                    if response.status_code == 401:
+                        [sg.Popup("Invalid Username and/or Password")]
 
-def openpageinbrowser(WEBURL):
-    webbrowser.open(WEBURL)
+        #   RTSP Stream
+        if event == 'Live View':
+            if values["-SMD-"] == True:
+                SMD = "1"
+            elif values["-SMD-"] == False:
+                SMD = "0"
+            if values["-VIDWALL-"] == True:
+                channels = CCTVC.availablerecorderchannels(CCTVC, ADDRESS, USERNAME, PASSWORD)
+                print(info(red(channels)))
+                CHANNELSELECT = channels
+                pass
+            elif values["-VIDWALL-"] == False:
+                if len(values['-CHANNELSELECT-']) > 0:
+                    CHANNELSELECT = values['-CHANNELSELECT-']
+                if len(values['-CHANNELSELECT-']) == 0:
+                    CHANNELSELECT = 0
+            if values["-STREAM0-"] == True:
+                STREAMSELECT = '0'
+            elif values["-STREAM1-"] == True:
+                STREAMSELECT = '1'
+
+            streaminput = ADDRESS
+            imagestream = streaminput.startswith('imgsrc=')
+            if imagestream == True:
+                pathtoimg = ADDRESS
+                pathtoimgsplit = pathtoimg.split("=")
+                pathtoimgsplit.remove("imgsrc")
+                print(pathtoimgsplit)
+                imagepath = pathtoimgsplit
+                openimagestream = multiprocessing.Process(target=CCTVC.openimage, args=(CCTVC, imagepath, SMD))
+                print("Opening Image, please wait a moment...")
+                # camstream.daemon = True
+                openimagestream.start()
+
+            if ADDRESS == "webcam":
+                WEBCAM = "1"
+                camstream = multiprocessing.Process(target=CCTVC.opencamerastream, args=(
+                CCTVC, ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, SMD, WEBCAM))
+                print("Opening Webcam Stream, please wait a moment...")
+                window['-MAINTOUTPUT-'].update(str("Opening Webcam Stream, please wait a moment..."))
+                # camstream.daemon = True
+                camstream.start()
+            else:
+                WEBCAM = "0"
+                if CCTVC.ping(CCTVC, ADDRESS) == True:
+                    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
+                    if len(USERNAME) == 0 or len(PASSWORD) == 0:
+                        [sg.Popup("You must fill out all fields.")]
+                        window.close()
+                        main()
+                        # break
+                    APIURL = ("http://" + ADDRESS + TARGETAPI)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                    response.encoding = 'utf-8-sig'
+                    print("response code:\n" + str(response.status_code))
+                    if response.status_code == 200:
+                        camstream = multiprocessing.Process(target=CCTVC.opencamerastream, args=(
+                        CCTVC, ADDRESS, USERNAME, PASSWORD, CHANNELSELECT, STREAMSELECT, SMD, WEBCAM))
+                        print("Opening RTSP Stream, please wait a moment...")
+                        window['-MAINTOUTPUT-'].update(str(f"Opening RTSP-Stream for {ADDRESS} ..."))
+                        # camstream.daemon = True
+                        camstream.start()
+                    if response.status_code == 401:
+                        window['-MAINTOUTPUT-'].update(
+                            str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+                if CCTVC.ping(CCTVC, ADDRESS) == False:
+                    window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
+
+        if event == 'Copy RTSP Link':
+            if len(values['-CHANNELSELECT-']) > 0:
+                CHANNELSELECT = values['-CHANNELSELECT-']
+            if len(values['-CHANNELSELECT-']) == 0:
+                CHANNELSELECT = 0
+            if values["-STREAM0-"] == True:
+                STREAMSELECT = '0'
+            elif values["-STREAM1-"] == True:
+                STREAMSELECT = '1'
+            pyperclip.copy(
+                "rtsp://" + USERNAME + ":" + PASSWORD + "@" + ADDRESS + '/cam/realmonitor?channel=' + CHANNELSELECT + '&subtype=' + STREAMSELECT)
+            # full_link_copy = ("rtsp://"+USERNAME+":"+"**********"+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+STREAMSELECT)
+            sg.popup_no_wait('Link copied to clipboard')
+
+        if event == 'Web Interface':
+            webbrowser.open(ADDRESS)
+
+        if event == '-MAINTHELP-':
+            sg.popup(
+                'Device Maintenance\n\n'
+                'Use this Window to do maintenance on your devices using the Dahua API\n\n'
+                "Enter the IP-Address, Username and Password of your chosen device and click 'Check' to see Device Information\n\n"
+                "Use the 'Select Channel' Field to specify the Channel you want to see.\n\n"
+                "Live View allows you to see the live-stream of your device.\n\n"
+                "~PTZ-Controls:~\n"
+                "ALT+P      -   Toggle PTZ Controls On/Off\n"
+                "W,A,S,D    -   Moving Up, Left, Down, Right\n"
+                "Q,E        -   Zoom Out, Zoom In\n"
+                "F          -   Autofocus\n"
+                "N,M        -   Wiper On/Off\n\n"
+                "You can select which Stream you want to see by clicking either 'Main Stream' or 'Sub Stream'\n\n"
+                "Clicking on 'Save Diagnostics File' will create a text file that includes some of the Settings of your camera.\n\n"
+                "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n",
+                title="Help")
+
+        if event == 'Serial No.':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/magicBox.cgi?action=getSerialNo")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                serialno = response.text.split("sn=")
+                window['-MAINTOUTPUT-'].update(str(serialno[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'Firmware Version':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/magicBox.cgi?action=getSoftwareVersion")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                softwarev = response.text.split("version=")
+                window['-MAINTOUTPUT-'].update(str(softwarev[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'Onvif Version':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=Onvif")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                onvifv = response.text.split("version=")
+                window['-MAINTOUTPUT-'].update(str(onvifv[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'HTTP API Version':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=CGI")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                httpapiv = response.text.split("version=")
+                window['-MAINTOUTPUT-'].update(str(httpapiv[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'Device Class':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/magicBox.cgi?action=getDeviceClass")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                deviceclass = response.text.split("class=")
+                window['-MAINTOUTPUT-'].update(str(deviceclass[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+    window.close()
+
+###########################
+### END OF SECOND WINDOW###
+###########################
 
 def main():
     MP1 = int()
@@ -381,29 +394,17 @@ def main():
     MP8 = int()
     MP12 = int()
 
-    splashscreen()
+    CCTVC.splashscreen(CCTVC)
 
 #   Tab Layout Definition for each window
-    tab0_layout = [[sg.Text('Camera Maintenance')],
+    tab0_layout = [[sg.Text('Device Maintenance')],
             [sg.Text('IP Address'), sg.Push(), sg.Input(key='-ADDRESSMAINT-', size=(15, 1)), sg.Push()],
             [sg.Text('Available Cameras'), sg.Push(), sg.Combo(values=tuple(avail_cams), key='-DROPADDRESS-', size=(15,1)), sg.Push(), sg.Button('Delete List')],
             [sg.Text('Username '), sg.Push(), sg.Input(key='-USERNAMEMAINT-', size=(15, 1)), sg.Push()],
             [sg.Text('Password '), sg.Push(), sg.Input(password_char = "•", key='-PASSWORDMAINT-', size=(15, 1)), sg.Push()],
-            [sg.Button('Check'), sg.Push(), sg.Text('Select Channel'), sg.Input('1', key='-CHANNELSELECT-', size=(4, 1)), sg.Push()], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
-            #[sg.Button('Serial No.'), sg.Button('Device Type'), sg.Button('Firmware Version')],
-            [sg.Radio('Main Stream', 'STREAM', default=True, key='-STREAM0-'), sg.Radio('Sub Stream', 'STREAM', key='-STREAM1-'), sg.Checkbox('Object Detection', default=False, key="-SMD-"), sg.Checkbox('Videowall', default=False, key="-VIDWALL-")],
-            [sg.Button('Live View'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface')],
-            [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
-            [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
-            [sg.Button('Exit', key='-EXIT0-'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="red")]]
-        
-    # tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
-    #         [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
-    #         [sg.Text('Username'), sg.Input(key='-USERNAME-')],
-    #         [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],
-    #         [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
-    #         [sg.Button('Open'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface'), sg.Button('Exit', key='-EXIT1-'), sg.Button('Help')]]
+            [sg.Button('Connect')], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
 
+            [sg.Button('Exit', key='-EXIT0-')]]
 
 
     bandwidth_layout =   [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
@@ -438,13 +439,14 @@ def main():
     tab4_layout = [[sg.Text('Lens Calculation')]]
 
     tab6_layout = [[sg.Text('CCTV Companion\n\n'
-                            'Version 0.2.2\n\n\n\n\n')],
+                            'Version 0.3\n\n\n\n\n')],
                     #[sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
-                    [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n")],
+                    [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n"
+                             "Want to see something added? Found a bug?\nUse the buttons below to report or open an Issue directly on Github\n\n")],
                    [sg.Button("Website", key="-PROJECTWEBSITE-"), sg.Button("Report a Bug", key="-BUGREPORT-"), sg.Button("Request a Feature", key="-FEATUREREQUEST-")]]
 
 #   Tab Group Layout (must contain ONLY tabs)
-    tab_group_layout = [[sg.Tab('Camera Maintenance', tab0_layout, key='-TAB0-'),
+    tab_group_layout = [[sg.Tab('Maintenance', tab0_layout, key='-TAB0-'),
                             #sg.Tab('RTSP Stream', tab1_layout, key='-TAB1-'),
                             sg.Tab('Capacity Calculation', tab2_layout, key='-TAB2-'),
                             #sg.Tab('IP Calculation', tab3_layout, key='-TAB3-'),
@@ -465,143 +467,9 @@ def main():
         event, values = window.read(timeout=10)
 
 #   Camera Maintenance
-    #   Diagnostics
-        if event == 'Save Diagnostics File' and sg.popup_yes_no('This will gather a lot of Data about the Device and store it in a Text File.\nThis might take a few seconds.\n\nStart the Diagnostics?') == 'Yes':
-            ADDRESS = ""
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            add_cam_to_settings(ADDRESS)
-            diagnosticslist = [
-                "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getHardwareVersion", "/cgi-bin/magicBox.cgi?action=getSerialNo", "/cgi-bin/magicBox.cgi?action=getMachineName",
-                "/cgi-bin/magicBox.cgi?action=getSystemInfo", "/cgi-bin/magicBox.cgi?action=getVendor", "/cgi-bin/magicBox.cgi?action=getSoftwareVersion", "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=Onvif",
-                "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=CGI", "/cgi-bin/magicBox.cgi?action=getDeviceClass", "/cgi-bin/userManager.cgi?action=getUserInfoAll"
-                ]
-            progresstarget = 0
-            if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                [sg.Popup("You must fill out all fields.")] 
-                window.close()
-                main()
-            diagfilename = ("diagnostics_"+ADDRESS+".txt")
-            with open(diagfilename, 'w') as diagfile:
-                for apirequest in diagnosticslist:
-                    APIURL = ("http://"+ADDRESS+apirequest)
-                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-                    response.encoding = 'utf-8-sig'
-                    if response.status_code == 200:
-                        print("\n"+apirequest+"\n" +str(response.text))
-                        diagfile.write("\n"+apirequest+"\n" +str(response.text))
-                        progresstarget += 1
-                        
-                    if response.status_code == 401:
-                        [sg.Popup("Invalid Username and/or Password")]
-            window['-MAINTOUTPUT-'].update(str("Diagnostics Saved!"))
-            [sg.Popup("Diagnostics File saved as diagnostics_"+ADDRESS+".txt")]
-            progresstarget = 0
-            
-#   Camera Maintenance
-    #   --HTTP-AUth DigestConnection Check--
-        if event == 'Check':
-            ADDRESS = ""
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            # adding camera to settings file
-            add_cam_to_settings(ADDRESS)
-            print(ADDRESS)
-
-            TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-            diagnosticslist = [
-                "/cgi-bin/magicBox.cgi?action=getDeviceType", "/cgi-bin/magicBox.cgi?action=getSerialNo", "/cgi-bin/magicBox.cgi?action=getSoftwareVersion",
-                ]
-            if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                [sg.Popup("You must fill out all fields.")] 
-                window.close()
-                main()
-                #break
-            APIURL = ("http://"+ADDRESS+TARGETAPI)
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            response.encoding = 'utf-8-sig'
-            print("response code:\n"+str(response.status_code))
-            if response.status_code == 200:
-                readout = []
-                for apirequest in diagnosticslist:
-                    APIURL = ("http://"+ADDRESS+apirequest)
-                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-                    response.encoding = 'utf-8-sig'
-                    if response.status_code == 200:
-                        print("\n"+apirequest+"\n" +str(response.text))
-                        readout.append(str(response.text))
-                fixreadout = "".join(readout)
-                window['-MAINTOUTPUT-'].update("Connected with: "+ADDRESS+"\n"+str(fixreadout))
-                # window['-MAINTOUTPUT-'].update(str(response.text))
-                # print("\nLogin successful:\n" +str(response.text))
-            if response.status_code == 401:
-                window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
-
-#   Camera Maintenance
-    #   Diagnostics
-        if event == 'Delete List':
-            if os.path.exists("cctvc_settings.txt"):
-                os.remove("cctvc_settings.txt")
-                [sg.PopupOK('Camera history deleted...')]
-            else:
-                pass
-
-            #   Camera Maintenance
-    #   Rebooting the Camera
-        if event == 'Reboot' and sg.popup_yes_no('This will restart your device, are you sure?') == 'Yes':
-            ADDRESS = ""
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            # adding camera to settings file
-            add_cam_to_settings(ADDRESS)
-            TARGETAPI = "/cgi-bin/magicBox.cgi?action=reboot"
-            if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                [sg.Popup("You must fill out all fields.")] 
-                window.close()
-                main()
-                #break
-            APIURL = ("http://"+ADDRESS+TARGETAPI)
-            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-            print("response code:\n" +str(response.status_code))
-            if response.status_code == 200:
-                window['-MAINTOUTPUT-'].update(str(response.text))
-                print("\nLogin successful:\n" +str(response.text))
-            if response.status_code == 401:
-                [sg.Popup("Invalid Username and/or Password")]
-
-#   Camera Maintenance
-    #   Will call a snapshot and display it as a .jpg in the standard browser
-        if event == 'Snapshot':
-            ADDRESS = ""
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            TARGETAPI = "/cgi-bin/snapshot.cgi"
-            serialnoapi = threading.Thread(target=webbrowserapiwindow(ADDRESS, USERNAME, PASSWORD, TARGETAPI))
-            serialnoapi.start()
-
-#   Camera Maintenance
-    #   Factory Resetting the Camera
-        #if event == 'Factory Reset' and sg.popup_yes_no('CAUTION:\nThis will reset your camera and return all Settings to their factory default value,\nare you sure?') == 'Yes':
-        
-        if event == 'Factory Reset' and sg.popup_yes_no("This will factory reset your device, are you sure?\nAll settings will be returned to their default value!") == "Yes":
-            if sg.popup_yes_no("This change cannot be reverted!", text_color="red", font="bold") == "Yes":
-                sg.popup_timed("Factory Resetting...")
+    #   Open Maintenance Window of Connected Device
+        if event == "Connect":
+            try:
                 ADDRESS = ""
                 if len(values['-DROPADDRESS-']) > 0:
                     ADDRESS = values['-DROPADDRESS-']
@@ -609,152 +477,60 @@ def main():
                     ADDRESS = values['-ADDRESSMAINT-']
                 USERNAME = values['-USERNAMEMAINT-']
                 PASSWORD = values['-PASSWORDMAINT-']
-                # adding camera to settings file
-                add_cam_to_settings(ADDRESS)
 
-                TARGETAPI = "/cgi-bin/magicBox.cgi?action=resetSystemEx&type=0"
-                if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                    [sg.Popup("You must fill out all fields.")] 
-                    window.close()
-                    main()
-                    #break
-                if len(values['-USERNAMEMAINT-']) != 0 or len(values['-PASSWORDMAINT-']) != 0:
-                    APIURL = ("http://"+ADDRESS+TARGETAPI)
-                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
-                    print("response code:\n" +str(response.status_code))
-                    if response.status_code == 200:
-                        window['-MAINTOUTPUT-'].update(str(response.text))
-                        print("\nLogin successful:\n" +str(response.text))
-                    if response.status_code == 401:
-                        [sg.Popup("Invalid Username and/or Password")]
+                if CCTVC.ping(CCTVC, ADDRESS) == True:
+                    # adding camera to settings file
+                    CCTVC.add_cam_to_settings(CCTVC, ADDRESS)
+                    print(ADDRESS)
 
-#   RTSP Stream
-        if event == 'Live View':
-            ADDRESS = ""
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            if values["-SMD-"] == True:
-                SMD = "1"
-            elif values["-SMD-"] == False:
-                SMD = "0"
-            if values["-VIDWALL-"] == True:
-                channels = availablerecorderchannels(ADDRESS, USERNAME, PASSWORD)
-                print(info(red(channels)))
-                CHANNELSELECT = channels
-                pass
-            elif values["-VIDWALL-"] == False:
-                if len(values['-CHANNELSELECT-']) > 0:
-                    CHANNELSELECT = values['-CHANNELSELECT-']
-                if len(values['-CHANNELSELECT-']) == 0:
-                    CHANNELSELECT = 0
-            if values["-STREAM0-"] == True:
-                STREAMSELECT = '0'
-            elif values["-STREAM1-"] == True:
-                STREAMSELECT = '1'
-
-
-            streaminput = values['-ADDRESSMAINT-']
-            imagestream = streaminput.startswith('imgsrc=')
-            if imagestream == True:
-                pathtoimg = values['-ADDRESSMAINT-']
-                pathtoimgsplit = pathtoimg.split("=")
-                pathtoimgsplit.remove("imgsrc")
-                print(pathtoimgsplit)
-                imagepath = pathtoimgsplit
-                openimagestream = multiprocessing.Process(target=openimage, args=(imagepath,SMD))
-                print("Opening Image, please wait a moment...")
-                    #camstream.daemon = True
-                openimagestream.start()
-
-            if values['-ADDRESSMAINT-'] == "webcam":
-                WEBCAM = "1"
-                camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD, CHANNELSELECT, STREAMSELECT,SMD,WEBCAM))
-                print("Opening Webcam Stream, please wait a moment...")
-                window['-MAINTOUTPUT-'].update(str("Opening Webcam Stream, please wait a moment..."))
-                    #camstream.daemon = True
-                camstream.start()
-            else:
-                WEBCAM = "0"
-                if ping(ADDRESS) == True:
-                    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getSerialNo"
-                    if len(values['-USERNAMEMAINT-']) == 0 or len(values['-PASSWORDMAINT-']) == 0:
-                            [sg.Popup("You must fill out all fields.")]
-                            window.close()
-                            main()
-                            #break
-                    APIURL = ("http://"+ADDRESS+TARGETAPI)
-                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME,PASSWORD))
+                    TARGETAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
+                    devicetypeAPI = "/cgi-bin/magicBox.cgi?action=getDeviceType"
+                    if len(USERNAME) == 0 or len(PASSWORD) == 0:
+                        [sg.Popup("You must fill out all fields.")]
+                        window.close()
+                        main()
+                        # break
+                    APIURL = ("http://" + ADDRESS + TARGETAPI)
+                    response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
                     response.encoding = 'utf-8-sig'
-                    print("response code:\n"+str(response.status_code))
+                    print("response code:\n" + str(response.status_code))
                     if response.status_code == 200:
-                        camstream = multiprocessing.Process(target=opencamerastream, args=(ADDRESS,USERNAME,PASSWORD, CHANNELSELECT, STREAMSELECT,SMD,WEBCAM))
-                        print("Opening RTSP Stream, please wait a moment...")
-                        #camstream.daemon = True
-                        camstream.start()
+                        readout = []
+                        APIURL = ("http://" + ADDRESS + devicetypeAPI)
+                        response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+                        response.encoding = 'utf-8-sig'
+                        if response.status_code == 200:
+                            print(devicetypeAPI + str(response.text))
+                            readout.append(str(response.text))
+                        CONNECTEDDEVICE = "".join(readout)
+                        camtypecpl = CONNECTEDDEVICE.split("type=")
+                        camtypefin = camtypecpl[1]
+                        print(camtypefin)
+                        #window['-MAINTOUTPUT-'].update("Connected with: " + ADDRESS + "\n" + str(CONNECTEDDEVICE))
+                        connected_window(ADDRESS, USERNAME, PASSWORD, camtypefin)
+                        # window['-MAINTOUTPUT-'].update(str(response.text))
+                        # print("\nLogin successful:\n" +str(response.text))
                     if response.status_code == 401:
-                        window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
-                if ping(ADDRESS) == False:
-                    window['-MAINTOUTPUT-'].update(str("IP Address not found or device is offline"))
+                        sg.PopupError("Authentication Unsuccesful\n-Wrong Username or Password-")
+                        #window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
+            except CCTVC.ping(CCTVC, ADDRESS) == False:
+                sg.Popup("Connection Timed Out. \n\nPlease Check your Internet Connection or"
+                         " if the Device you're trying to reach is online.", title="Connection Timed Out")
 
-        if event == 'Copy RTSP Link':
-            ADDRESS = ""
-            if len(values['-CHANNELSELECT-']) > 0:
-                CHANNELSELECT = values['-CHANNELSELECT-']
-            if len(values['-CHANNELSELECT-']) == 0:
-                CHANNELSELECT = 0
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            USERNAME = values['-USERNAMEMAINT-']
-            PASSWORD = values['-PASSWORDMAINT-']
-            if values["-STREAM0-"] == True:
-                STREAMSELECT = '0'
-            elif values["-STREAM1-"] == True:
-                STREAMSELECT = '1'
-            pyperclip.copy("rtsp://"+USERNAME+":"+PASSWORD+"@"+ADDRESS+'/cam/realmonitor?channel='+ CHANNELSELECT +'&subtype='+STREAMSELECT)
-            #full_link_copy = ("rtsp://"+USERNAME+":"+"**********"+"@"+ADDRESS+'/cam/realmonitor?channel=1&subtype='+STREAMSELECT)
-            sg.popup_no_wait('Link copied to clipboard')
 
-        if event == 'Web Interface':
-            ADDRESS = ""
-            if len(values['-DROPADDRESS-']) > 0:
-                ADDRESS = values['-DROPADDRESS-']
-            elif values['-DROPADDRESS-'] == "":
-                ADDRESS = values['-ADDRESSMAINT-']
-            webbrowser.open(ADDRESS)
 
-        if event == '-MAINTHELP-':
-            sg.popup(
-                'Camera Maintenance\n\n'
-                'Use this Window to do maintenance on your cameras using the Dahua API\n\n'
-                "Enter the IP-Address, Username and Password of your chosen device and click 'Check' to see Device Information\n\n"
-                "Use the 'Select Channel' Field to specify the Channel you want to see.\n\n"
-                "Live View allows you to see the live-stream of your Camera.\n\n"
-                "~PTZ-Controls:~\n"
-                "W,A,S,D    -   Moving Up, Left, Down, Right\n"
-                "Q,E        -   Zoom Out, Zoom In\n"
-                "F          -   Autofocus\n"
-                "N,M        -   Wiper On/Off\n\n"
-                "You can select which Stream you want to see by clicking either 'Main Stream' or 'Sub Stream'\n\n"
-                "Clicking on 'Save Diagnostics File' will create a text file that includes some of the Settings of your camera.\n\n"
-                "If you click on the Button 'Web Interface' it'll open your default Webbrowser and navigate you to the entered IP-Address\n\n", title="Help")
 
 
         if event == '-PROJECTWEBSITE-':
-            openpageinbrowser("https://github.com/ColditzColligula/CCTV-Companion")
+            CCTVC.openpageinbrowser(CCTVC, "https://github.com/ColditzColligula/CCTV-Companion")
 
         if event == '-BUGREPORT-':
             bugreport = [sg.popup_get_text(("Bug Report\nPlease write a report detailing the bug/issue you're experiencing as well as the steps to reproduce this bug."), size=(80,3))]
-            webhook_post("https://webhook.grouplotse.com:4433/inc/19851500", "HpKg5TK5bhwL", bugreport)
+            CCTVC.webhook_post(CCTVC, "https://webhook.grouplotse.com:4433/inc/19851500", "HpKg5TK5bhwL", bugreport)
             [sg.PopupTimed("Bug Report was sent!", title="Sent", auto_close_duration=(1))]
         if event == '-FEATUREREQUEST-':
             featurerequest = [sg.popup_get_text(("Feature Request\nPlease write a report detailing the feature you would like to see implemented in CCTV-Companion."), size=(80,3))]
-            webhook_post("https://webhook.grouplotse.com:4433/inc/19857802", "jQoIZn8BW0Ch", featurerequest)
+            CCTVC.webhook_post(CCTVC, "https://webhook.grouplotse.com:4433/inc/19857802", "jQoIZn8BW0Ch", featurerequest)
             [sg.PopupTimed("Feature Request was sent!", title="Sent", auto_close_duration=(1))]
 
 #   Bandwidth Calculation
@@ -823,10 +599,17 @@ def main():
                 window['-BandwidthResultTextMB-'].update(bandwidthresultMB)
 
         if event == '-RECTIMECALCULATE-':
-            rectime_cambitrate = int(values['-RECTIMEBITRATE-']) * int(values['-RECTIMECAMERAS-'])
-            terabyte_in_kbits = int(values['-RECTIMETB-']) * float(8796093022.208)
+            bitrate = values['-RECTIMEBITRATE-']
+            bitratef = bitrate.replace(",", ".")
+            cameras = values['-RECTIMECAMERAS-']
+            camerasf = cameras.replace(",", ".")
+            terabyte = values['-RECTIMETB-']
+            terabytef = terabyte.replace(",", ".")
+
+            rectime_cambitrate = float(bitratef) * float(camerasf)
+            terabyte_in_kbits = float(terabytef) * float(8796093022.208)
             rectime_in_seconds = terabyte_in_kbits / rectime_cambitrate
-            rectime_in_hours = rectime_in_seconds / int(3600)
+            rectime_in_hours = rectime_in_seconds / float(3600)
             rectime_in_days = rectime_in_hours * float(0.0416666667)
             print(rectime_in_days)
             rectime_prelim = str(rectime_in_days).split(".")
@@ -843,4 +626,13 @@ def main():
 #   Required for Multiprocessing to work on Windows Based OS
 if __name__ == '__main__':
     multiprocessing.freeze_support()
-    main()
+    try:
+        if CCTVC.updatecheck(CCTVC) != "0.3":
+            print("Update Available!")
+            if sg.popup_yes_no('An Update for CCTV-Companion is available.\nDo you want to update?') == 'Yes':
+                CCTVC.openpageinbrowser(CCTVC, "https://github.com/ColditzColligula/CCTV-Companion/releases/latest")
+                sys.exit()
+    except:
+        sys.exit("Taking you to the update page...")
+    else:
+        main()
