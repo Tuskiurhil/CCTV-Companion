@@ -17,6 +17,8 @@ from requests.auth import HTTPDigestAuth
 
 class CCTVC:
 
+    ptz_active = False
+
     def updatecheck(self):
         response = requests.get("https://api.github.com/repos/ColditzColligula/CCTV-Companion/releases/latest")
         # print(response.json()["tag_name"])
@@ -98,19 +100,19 @@ class CCTVC:
 
     def ptz_movement(self, ADDRESS, USERNAME, PASSWORD, ):
         """Allows control of PTZ Cameras through Dahua API calls over HTTP Requests"""
-        ptz_active = False
+
+
         while True:
-            return ptz_active
             event = keyboard.read_event()
-            if event.event_type == keyboard.KEY_DOWN and event.name == 'alt' and 'p':
-                if ptz_active == False:
-                    ptz_active = True
+            if event.event_type == keyboard.KEY_DOWN and event.name == ('alt' and 'p'):
+                if not CCTVC.ptz_active:
+                    CCTVC.ptz_active = True
                     print("PTZ Controls Activated")
-                elif ptz_active == True:
-                    ptz_active = False
+                elif CCTVC.ptz_active:
+                    CCTVC.ptz_active = False
                     print("PTZ Controls Deactivated")
 
-            if ptz_active == True:
+            if CCTVC.ptz_active:
                 if event.event_type == keyboard.KEY_DOWN and event.name == 's':
                     APIURL = "http://" + ADDRESS + "/cgi-bin/ptz.cgi?action=start&channel=1&code=Down&arg1=0&arg2=2&arg3=0"
                     response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
@@ -253,7 +255,7 @@ class CCTVC:
                 "rtsp://" + USERNAME + ":" + PASSWORD + "@" + ADDRESS + '/cam/realmonitor?channel=' + CHANNELSELECT + '&subtype=' + STREAMSELECT
             ))
         #   PTZ Control
-        ptz_control = multiprocessing.Process(target=CCTVC.ptz_movement, args=(CCTVC, ADDRESS, USERNAME, PASSWORD,))
+        ptz_control = threading.Thread(target=CCTVC.ptz_movement, args=(CCTVC, ADDRESS, USERNAME, PASSWORD,))
         ptz_control.daemon = True
         ptz_control.start()
 
@@ -284,16 +286,20 @@ class CCTVC:
                                         cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
                             cv2.putText(frame, str(round(confidence * 100, 2)), (box[0] + 200, box[1] + 30),
                                         cv2.FONT_HERSHEY_COMPLEX, 1, (0, 255, 0), 2)
-                        if classId == int(1) and detectedObjectResponse_isRunning == 0:
-                            detection = threading.Thread(target=detectedObjectResponse)
-                            detection.start()
-                            detectedObjectResponse_isRunning = 1
+                        #if classId == int(1) and detectedObjectResponse_isRunning == 0:
+                        #    detection = threading.Thread(target=detectedObjectResponse)
+                        #    detection.start()
+                        #    detectedObjectResponse_isRunning = 1
             if WEBCAM == "1":
                 cv2.putText(frame, "CAM", (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
                 cv2.putText(frame, "CAM", (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
             elif WEBCAM == "0":
                 cv2.putText(frame, ADDRESS, (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_bot, thickness=3)
                 cv2.putText(frame, ADDRESS, (30, 40), cv2.FONT_HERSHEY_DUPLEX, 1.0, text_color_top, thickness=2)
+            if CCTVC.ptz_active == True:
+                cv2.putText(frame, "PTZ ON", (30, 80), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0,255,0), thickness=3)
+            elif CCTVC.ptz_active == False:
+                cv2.putText(frame, "PTZ OFF", (30, 80), cv2.FONT_HERSHEY_DUPLEX, 1.0, (0,0,255), thickness=2)
             cv2.imshow(str(ADDRESS), frame)
             if cv2.waitKey(1) & 0xFF == ord('p'):
                 break

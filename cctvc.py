@@ -22,8 +22,6 @@ USERNAME = ""
 PASSWORD = ""
 TARGETAPI = ""
 
-STREAMPAUSE = False
-
 detectedObjectResponse_isRunning = 0
 
 
@@ -100,7 +98,8 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
               [sg.Button('Live View'), sg.Button('Copy RTSP Link')],
 
               [sg.Text("____________________\nDevice Info", text_color="red")],
-              [sg.Button('Serial No.'), sg.Button('Firmware Version')],
+              [sg.Button('Serial No.'), sg.Button('Firmware Version'), sg.Button('Onvif Version')],
+              [sg.Button('HTTP API Version'), sg.Button('Device Class')],
               #[sg.Button('Max Extra Streams', button_color="red"), sg.Button('Encoding Configuration', button_color="red"),sg.Button('Channel Title', button_color="red")],
               #[sg.Button('Device Time', button_color="red"), sg.Button('Available Languages', button_color="red")],
 
@@ -332,7 +331,51 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
             print("response code:\n" + str(response.status_code))
             if response.status_code == 200:
                 serialno = response.text.split("sn=")
-                window['-MAINTOUTPUT-'].update(str(serialno))
+                window['-MAINTOUTPUT-'].update(str(serialno[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'Firmware Version':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/magicBox.cgi?action=getSoftwareVersion")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                softwarev = response.text.split("version=")
+                window['-MAINTOUTPUT-'].update(str(softwarev[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'Onvif Version':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=Onvif")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                onvifv = response.text.split("version=")
+                window['-MAINTOUTPUT-'].update(str(onvifv[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'HTTP API Version':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/IntervideoManager.cgi?action=getVersion&Name=CGI")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                httpapiv = response.text.split("version=")
+                window['-MAINTOUTPUT-'].update(str(httpapiv[1]))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'Device Class':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/magicBox.cgi?action=getDeviceClass")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                deviceclass = response.text.split("class=")
+                window['-MAINTOUTPUT-'].update(str(deviceclass[1]))
             if response.status_code == 401:
                 window['-MAINTOUTPUT-'].update(
                     str("ERROR 401 - Authentication Error"))
@@ -362,14 +405,6 @@ def main():
             [sg.Button('Connect')], #sg.Slider(range = (1, 5), orientation="h", s=(10, 6), key='-SMDQUALITY-')],
 
             [sg.Button('Exit', key='-EXIT0-')]]
-        
-    # tab1_layout = [[sg.Text('RTSP Stream')], #sg.Image('dahua_logo.png', subsample=(14), tooltip=('This RTSP Stream only works with Dahua IP-Cameras'))],
-    #         [sg.Text('IP Address & Port'), sg.Input(key='-ADDRESS-')],
-    #         [sg.Text('Username'), sg.Input(key='-USERNAME-')],
-    #         [sg.Text('Password'), sg.Input(password_char = "•", key='-PASSWORD-')],
-    #         [sg.Radio('Main Stream', 'CHANNEL', default=True, key='-CHANNEL0-'), sg.Radio('Sub Stream', 'CHANNEL', key='-CHANNEL1-')],
-    #         [sg.Button('Open'), sg.Button('Copy RTSP Link'), sg.Button('Web Interface'), sg.Button('Exit', key='-EXIT1-'), sg.Button('Help')]]
-
 
 
     bandwidth_layout =   [[sg.Text('Bandwidth Calculation - (High Quality / 25 fps)')],
@@ -404,9 +439,10 @@ def main():
     tab4_layout = [[sg.Text('Lens Calculation')]]
 
     tab6_layout = [[sg.Text('CCTV Companion\n\n'
-                            'Version 0.2.2\n\n\n\n\n')],
+                            'Version 0.3\n\n\n\n\n')],
                     #[sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
-                    [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n")],
+                    [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n"
+                             "Want to see something added? Found a bug?\nUse the buttons below to report or open an Issue directly on Github\n\n")],
                    [sg.Button("Website", key="-PROJECTWEBSITE-"), sg.Button("Report a Bug", key="-BUGREPORT-"), sg.Button("Request a Feature", key="-FEATUREREQUEST-")]]
 
 #   Tab Group Layout (must contain ONLY tabs)
@@ -477,7 +513,7 @@ def main():
                     if response.status_code == 401:
                         sg.PopupError("Authentication Unsuccesful\n-Wrong Username or Password-")
                         #window['-MAINTOUTPUT-'].update(str("Authentication Unsuccesful\n-Wrong Username or Password-"))
-            except:
+            except CCTVC.ping(CCTVC, ADDRESS) == False:
                 sg.Popup("Connection Timed Out. \n\nPlease Check your Internet Connection or"
                          " if the Device you're trying to reach is online.", title="Connection Timed Out")
 
@@ -591,7 +627,7 @@ def main():
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     try:
-        if CCTVC.updatecheck(CCTVC) != "0.2.1":
+        if CCTVC.updatecheck(CCTVC) != "0.3":
             print("Update Available!")
             if sg.popup_yes_no('An Update for CCTV-Companion is available.\nDo you want to update?') == 'Yes':
                 CCTVC.openpageinbrowser(CCTVC, "https://github.com/ColditzColligula/CCTV-Companion/releases/latest")
