@@ -116,8 +116,12 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
 
               [sg.Text("____________________\nMaintenance", text_color="red")],
               [sg.Button('Reboot'), sg.Button('Snapshot'), sg.Button('Save Diagnostics File'), sg.Button('Factory Reset')],
-              [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(50, 6), background_color="white")],
-              [sg.Button('Disconnect'), sg.Push(), sg.Button('Web Interface'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="orange")]
+              [sg.Text("____________________\nAlarm", text_color="red")],
+              [sg.Button('Get Alarm Config'), sg.Button('Get Alarm Out Config'), sg.Button('Get Amount of Alarm In/Out Channels')],
+              [sg.Button('Toggle Alarm 1'), sg.Button('Toggle Alarm 2')],
+
+              [sg.Multiline(key="-MAINTOUTPUT-", autoscroll=True, size=(60, 10), background_color="white")],
+              [sg.Button('Disconnect'), sg.Push(), sg.Button('Web Interface'), sg.Push(), sg.Button('Help', key='-MAINTHELP-', button_color="orange")],
               ]
     window = sg.Window(f"{CONNECTEDDEVICE} at {ADDRESS}", con_layout, modal=False)
     while True:
@@ -380,6 +384,105 @@ def connected_window(ADDRESS, USERNAME, PASSWORD, CONNECTEDDEVICE):
                 window['-MAINTOUTPUT-'].update(
                     str("ERROR 401 - Authentication Error"))
 
+        if event == 'Get Alarm Config':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/configManager.cgi?action=getConfig&name=Alarm")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                alarmconfig = response.text.split("table.")
+                text = ""
+                text = ",".join(alarmconfig)
+                print(text)
+                window['-MAINTOUTPUT-'].update(str(text))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+            if response.status_code == 400:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 400 - Bad Request"))
+
+        if event == 'Get Alarm Out Config':
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/configManager.cgi?action=getConfig&name=AlarmOut")
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200:
+                alarmoutconfig = response.text.split("table.")
+                text = ""
+                text = ",".join(alarmoutconfig)
+                print(text)
+                window['-MAINTOUTPUT-'].update(str(text))
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+            if response.status_code == 400:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 400 - Bad Request"))
+
+        if event == 'Get Amount of Alarm In/Out Channels':
+            APIURL1 = ("http://" + ADDRESS + "/cgi-bin/alarm.cgi?action=getInSlots")
+            response1 = requests.get(APIURL1, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            APIURL2 = ("http://" + ADDRESS + "/cgi-bin/alarm.cgi?action=getOutSlots")
+            response2 = requests.get(APIURL2, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response1.status_code))
+            if response1.status_code == 200 and response2.status_code == 200:
+                amountalarminput1 = response1.text.split("result=")
+                amountalarminput2 = response2.text.split("result=")
+                window['-MAINTOUTPUT-'].update(f"Input Slots: {amountalarminput1[1]}\nOutput Slots: {amountalarminput2[1]}")
+            if response1.status_code == 401 or response2.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+
+        if event == 'Toggle Alarm 1':
+            ALARMONOFF = ("http://" + ADDRESS + "/cgi-bin/configManager.cgi?action=getConfig&name=AlarmOut[0]")
+            alarmonoffcheck = requests.get(ALARMONOFF, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(alarmonoffcheck.status_code))
+            modeonoff = "Mode=0" in str(alarmonoffcheck.text)
+            print(modeonoff)
+            if modeonoff:
+                setOn = "Mode=1"
+            else:
+                setOn = "Mode=0"
+            print(setOn)
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/configManager.cgi?action=setConfig&AlarmOut[0]." + setOn)
+            print(APIURL)
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200 and setOn == "Mode=1":
+                window['-MAINTOUTPUT-'].update("Alarm turned ON")
+            elif response.status_code == 200 and setOn == "Mode=0":
+                window['-MAINTOUTPUT-'].update("Alarm turned OFF")
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+            if response.status_code == 400:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 400 - Bad Request"))
+
+        if event == 'Toggle Alarm 2':
+            ALARMONOFF = ("http://" + ADDRESS + "/cgi-bin/configManager.cgi?action=getConfig&name=AlarmOut[1]")
+            alarmonoffcheck = requests.get(ALARMONOFF, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(alarmonoffcheck.status_code))
+            modeonoff = "Mode=0" in str(alarmonoffcheck.text)
+            print(modeonoff)
+            if modeonoff:
+                setOn = "Mode=1"
+            else:
+                setOn = "Mode=0"
+            print(setOn)
+            APIURL = ("http://" + ADDRESS + "/cgi-bin/configManager.cgi?action=setConfig&AlarmOut[1]." + setOn)
+            print(APIURL)
+            response = requests.get(APIURL, auth=HTTPDigestAuth(USERNAME, PASSWORD))
+            print("response code:\n" + str(response.status_code))
+            if response.status_code == 200 and setOn == "Mode=1":
+                window['-MAINTOUTPUT-'].update("Alarm turned ON")
+            elif response.status_code == 200 and setOn == "Mode=0":
+                window['-MAINTOUTPUT-'].update("Alarm turned OFF")
+            if response.status_code == 401:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 401 - Authentication Error"))
+            if response.status_code == 400:
+                window['-MAINTOUTPUT-'].update(
+                    str("ERROR 400 - Bad Request"))
     window.close()
 
 ###########################
@@ -439,7 +542,7 @@ def main():
     tab4_layout = [[sg.Text('Lens Calculation')]]
 
     tab6_layout = [[sg.Text('CCTV Companion\n\n'
-                            'Version 0.3\n\n\n\n\n')],
+                            'Version 0.31\n\n\n\n\n')],
                     #[sg.Text('Dahua Products and the Dahua Logo are ©Copyrighted by Dahua Technology Co., Ltd\n')],
                     [sg.Text("This Tool is still under active development.\nCurrent Support: Dahua\n\n"
                              "Want to see something added? Found a bug?\nUse the buttons below to report or open an Issue directly on Github\n\n")],
@@ -526,11 +629,11 @@ def main():
 
         if event == '-BUGREPORT-':
             bugreport = [sg.popup_get_text(("Bug Report\nPlease write a report detailing the bug/issue you're experiencing as well as the steps to reproduce this bug."), size=(80,3))]
-            CCTVC.webhook_post(CCTVC, "https://webhook.grouplotse.com:4433/inc/19851500", "HpKg5TK5bhwL", bugreport)
+            CCTVC.webhook_post(CCTVC, "https://webhook.grouplotse.com:4433/inc/22065053", "vGLDfoRDT3YN", bugreport)
             [sg.PopupTimed("Bug Report was sent!", title="Sent", auto_close_duration=(1))]
         if event == '-FEATUREREQUEST-':
             featurerequest = [sg.popup_get_text(("Feature Request\nPlease write a report detailing the feature you would like to see implemented in CCTV-Companion."), size=(80,3))]
-            CCTVC.webhook_post(CCTVC, "https://webhook.grouplotse.com:4433/inc/19857802", "jQoIZn8BW0Ch", featurerequest)
+            CCTVC.webhook_post(CCTVC, "https://webhook.grouplotse.com:4433/inc/22058410", "EWcIAuWu1yyj", featurerequest)
             [sg.PopupTimed("Feature Request was sent!", title="Sent", auto_close_duration=(1))]
 
 #   Bandwidth Calculation
@@ -627,7 +730,7 @@ def main():
 if __name__ == '__main__':
     multiprocessing.freeze_support()
     try:
-        if CCTVC.updatecheck(CCTVC) != "0.3":
+        if CCTVC.updatecheck(CCTVC) != "0.31":
             print("Update Available!")
             if sg.popup_yes_no('An Update for CCTV-Companion is available.\nDo you want to update?') == 'Yes':
                 CCTVC.openpageinbrowser(CCTVC, "https://github.com/ColditzColligula/CCTV-Companion/releases/latest")
